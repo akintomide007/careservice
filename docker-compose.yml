@@ -25,8 +25,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: care-provider-redis
-    ports:
-      - "6379:6379"
+    # Port mapping removed - only internal services need access
+    # If you need to access Redis from host, uncomment: - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -79,7 +79,7 @@ services:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
-      - "3000:3000"
+      - "3010:3000"  # Using port 3010 on host to avoid conflicts
     volumes:
       - ./web-dashboard:/app
       - /app/node_modules

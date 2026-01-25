@@ -49,6 +49,9 @@ WORKDIR /app
 
 ENV NODE_ENV=development
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Install all dependencies including dev dependencies
 COPY package*.json ./
 RUN npm install
@@ -59,7 +62,8 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
-USER node
+# Don't switch to node user in development to avoid permission issues with volumes
+# USER node
 
 EXPOSE 3001
 
