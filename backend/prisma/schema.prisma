@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String              @id @default(uuid())
+  azureAdId             String              @unique @map("azure_ad_id")
+  email                 String              @unique
+  password              String
+  firstName             String              @map("first_name")
+  lastName              String              @map("last_name")
+  role                  String
+  phone                 String?
+  isActive              Boolean             @default(true) @map("is_active")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  
+  serviceSessions       ServiceSession[]
+  progressNotes         ProgressNote[]
+  incidentReports       IncidentReport[]
+  approvedNotes         ProgressNote[]      @relation("ApprovedByUser")
+  reviewedIncidents     IncidentReport[]    @relation("ReviewedByUser")
+  digitalSignatures     DigitalSignature[]
+  auditLogs             AuditLog[]
+  teamsNotifications    TeamsNotification[]
+
+  @@map("users")
+}
+
+model Client {
+  id                      String          @id @default(uuid())
+  firstName               String          @map("first_name")
+  lastName                String          @map("last_name")
+  dateOfBirth             DateTime?       @map("date_of_birth") @db.Date
+  dddId                   String?         @unique @map("ddd_id")
+  address                 String?
+  emergencyContactName    String?         @map("emergency_contact_name")
+  emergencyContactPhone   String?         @map("emergency_contact_phone")
+  photoUrl                String?         @map("photo_url")
+  isActive                Boolean         @default(true) @map("is_active")
+  createdAt               DateTime        @default(now()) @map("created_at")
+  updatedAt               DateTime        @updatedAt @map("updated_at")
+  
+  ispOutcomes             IspOutcome[]
+  serviceSessions         ServiceSession[]
+  progressNotes           ProgressNote[]
+  incidentReports         IncidentReport[]
+
+  @@map("clients")
+}
+
+model IspOutcome {
+  id                    String          @id @default(uuid())
+  clientId              String          @map("client_id")
+  outcomeDescription    String          @map("outcome_description")
+  category              String?
+  targetDate            DateTime?       @map("target_date") @db.Date
+  status                String          @default("active")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+  
+  client                Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  progressNotes         ProgressNote[]
+
+  @@map("isp_outcomes")
+}
+
+model ServiceSession {
+  id                  String          @id @default(uuid())
+  staffId             String          @map("staff_id")
+  clientId            String          @map("client_id")
+  serviceType         String          @map("service_type")
+  clockInTime         DateTime        @map("clock_in_time")
+  clockInLat          Float?          @map("clock_in_lat")
+  clockInLng          Float?          @map("clock_in_lng")
+  clockOutTime        DateTime?       @map("clock_out_time")
+  clockOutLat         Float?          @map("clock_out_lat")
+  clockOutLng         Float?          @map("clock_out_lng")
+  totalHours          Float?          @map("total_hours")
+  locationName        String?         @map("location_name")
+  status              String          @default("in_progress")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  
+  staff               User            @relation(fields: [staffId], references: [id])
+  client              Client          @relation(fields: [clientId], references: [id])
+  progressNotes       ProgressNote[]
+
+  @@index([staffId])
+  @@index([clientId])
+  @@map("service_sessions")
+}
+
+model ProgressNote {
+  id                    String                      @id @default(uuid())
+  sessionId             String?                     @map("session_id")
+  clientId              String                      @map("client_id")
+  staffId               String                      @map("staff_id")
+  serviceType           String                      @map("service_type")
+  serviceDate           DateTime                    @map("service_date") @db.Date
+  startTime             DateTime                    @map("start_time") @db.Time(6)
+  endTime               DateTime                    @map("end_time") @db.Time(6)
+  location              String?
+  ispOutcomeId          String?                     @map("isp_outcome_id")
+  reasonForService      String?                     @map("reason_for_service")
+  supportsProvided      String?                     @map("supports_provided")
+  individualResponse    Json?                       @map("individual_response")
+  progressAssessment    String?                     @map("progress_assessment")
+  progressNotes         String?                     @map("progress_notes")
+  safetyDignityNotes    String?                     @map("safety_dignity_notes")
+  nextSteps             String?                     @map("next_steps")
+  status                String                      @default("draft")
+  submittedAt           DateTime?                   @map("submitted_at")
+  approvedBy            String?                     @map("approved_by")
+  approvedAt            DateTime?                   @map("approved_at")
+  rejectionReason       String?                     @map("rejection_reason")
+  sharepointUrl         String?                     @map("sharepoint_url")
+  pdfUrl                String?                     @map("pdf_url")
+  createdAt             DateTime                    @default(now()) @map("created_at")
+  updatedAt             DateTime                    @updatedAt @map("updated_at")
+  
+  session               ServiceSession?             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  client                Client                      @relation(fields: [clientId], references: [id])
+  staff                 User                        @relation(fields: [staffId], references: [id])
+  ispOutcome            IspOutcome?                 @relation(fields: [ispOutcomeId], references: [id])
+  approver              User?                       @relation("ApprovedByUser", fields: [approvedBy], references: [id])
+  activities            ProgressNoteActivity[]
+  mediaAttachments      MediaAttachment[]
+  digitalSignatures     DigitalSignature[]
+  teamsNotifications    TeamsNotification[]
+
+  @@index([status])
+  @@index([clientId])
+  @@index([staffId])
+  @@map("progress_notes")
+}
+
+model ProgressNoteActivity {
+  id                    String          @id @default(uuid())
+  progressNoteId        String          @map("progress_note_id")
+  activityNumber        Int             @map("activity_number")
+  taskGoal              String          @map("task_goal")
+  supportsProvided      String?         @map("supports_provided")
+  promptLevel           String[]        @map("prompt_level")
+  objectiveObservation  String?         @map("objective_observation")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  
+  progressNote          ProgressNote    @relation(fields: [progressNoteId], references: [id], onDelete: Cascade)
+
+  @@map("progress_note_activities")
+}
+
+model MediaAttachment {
+  id                  String            @id @default(uuid())
+  progressNoteId      String?           @map("progress_note_id")
+  incidentReportId    String?           @map("incident_report_id")
+  fileType            String            @map("file_type")
+  fileUrl             String            @map("file_url")
+  azureBlobPath       String?           @map("azure_blob_path")
+  thumbnailUrl        String?           @map("thumbnail_url")
+  fileSizeBytes       BigInt?           @map("file_size_bytes")
+  durationSeconds     Int?              @map("duration_seconds")
+  transcription       String?
+  caption             String?
+  createdAt           DateTime          @default(now()) @map("created_at")
+  
+  progressNote        ProgressNote?     @relation(fields: [progressNoteId], references: [id], onDelete: Cascade)
+  incidentReport      IncidentReport?   @relation(fields: [incidentReportId], references: [id], onDelete: Cascade)
+
+  @@map("media_attachments")
+}
+
+model IncidentReport {
+  id                  String              @id @default(uuid())
+  clientId            String              @map("client_id")
+  staffId             String              @map("staff_id")
+  incidentDate        DateTime            @map("incident_date") @db.Date
+  incidentTime        DateTime            @map("incident_time") @db.Time(6)
+  location            String?
+  locationLat         Float?              @map("location_lat")
+  locationLng         Float?              @map("location_lng")
+  employeeStatement   String?             @map("employee_statement")
+  clientStatement     String?             @map("client_statement")
+  actionTaken         String?             @map("action_taken")
+  severity            String
+  incidentType        String              @map("incident_type")
+  status              String              @default("open")
+  submittedAt         DateTime            @default(now()) @map("submitted_at")
+  reviewedBy          String?             @map("reviewed_by")
+  reviewedAt          DateTime?           @map("reviewed_at")
+  sharepointUrl       String?             @map("sharepoint_url")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  
+  client              Client              @relation(fields: [clientId], references: [id])
+  staff               User                @relation(fields: [staffId], references: [id])
+  reviewer            User?               @relation("ReviewedByUser", fields: [reviewedBy], references: [id])
+  mediaAttachments    MediaAttachment[]
+  digitalSignatures   DigitalSignature[]
+  teamsNotifications  TeamsNotification[]
+
+  @@index([status])
+  @@index([severity])
+  @@map("incident_reports")
+}
+
+model DigitalSignature {
+  id                  String            @id @default(uuid())
+  progressNoteId      String?           @map("progress_note_id")
+  incidentReportId    String?           @map("incident_report_id")
+  userId              String            @map("user_id")
+  signatureType       String            @map("signature_type")
+  signatureData       String            @map("signature_data")
+  signedAt            DateTime          @default(now()) @map("signed_at")
+  ipAddress           String?           @map("ip_address")
+  deviceInfo          String?           @map("device_info")
+  
+  progressNote        ProgressNote?     @relation(fields: [progressNoteId], references: [id], onDelete: Cascade)
+  incidentReport      IncidentReport?   @relation(fields: [incidentReportId], references: [id], onDelete: Cascade)
+  user                User              @relation(fields: [userId], references: [id])
+
+  @@map("digital_signatures")
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  userId      String?   @map("user_id")
+  action      String
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  changes     Json?
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model TeamsNotification {
+  id                  String            @id @default(uuid())
+  progressNoteId      String?           @map("progress_note_id")
+  incidentReportId    String?           @map("incident_report_id")
+  recipientUserId     String?           @map("recipient_user_id")
+  notificationType    String            @map("notification_type")
+  teamsMessageId      String?           @map("teams_message_id")
+  adaptiveCardJson    Json?             @map("adaptive_card_json")
+  sentAt              DateTime          @default(now()) @map("sent_at")
+  actionTaken         String?           @map("action_taken")
+  actionTakenAt       DateTime?         @map("action_taken_at")
+  
+  progressNote        ProgressNote?     @relation(fields: [progressNoteId], references: [id])
+  incidentReport      IncidentReport?   @relation(fields: [incidentReportId], references: [id])
+  recipientUser       User?             @relation(fields: [recipientUserId], references: [id])
+
+  @@map("teams_notifications")
+}
+
+// Survey/Form Template System
+model FormTemplate {
+  id                String          @id @default(uuid())
+  name              String
+  description       String?
+  formType          String          @map("form_type") // 'progress_note', 'incident_report'
+  serviceType       String?         @map("service_type") // 'community_based_support', etc.
+  isActive          Boolean         @default(true) @map("is_active")
+  isDefault         Boolean         @default(false) @map("is_default")
+  version           Int             @default(1)
+  createdBy         String?         @map("created_by")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  sections          FormSection[]
+  responses         FormResponse[]
+
+  @@map("form_templates")
+}
+
+model FormSection {
+  id                String          @id @default(uuid())
+  templateId        String          @map("template_id")
+  title             String
+  description       String?
+  orderIndex        Int             @map("order_index")
+  isRepeatable      Boolean         @default(false) @map("is_repeatable") // Can add multiple instances
+  maxRepeat         Int?            @map("max_repeat")
+  isRequired        Boolean         @default(true) @map("is_required")
+  
+  template          FormTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields            FormField[]
+
+  @@map("form_sections")
+}
+
+model FormField {
+  id                String          @id @default(uuid())
+  sectionId         String          @map("section_id")
+  label             String
+  fieldType         String          @map("field_type") // 'text', 'textarea', 'select', 'multiselect', 'checkbox', 'radio'
+  orderIndex        Int             @map("order_index")
+  isRequired        Boolean         @default(false) @map("is_required")
+  options           Json?           // For select/radio/checkbox options
+  validation        Json?           // Validation rules
+  placeholder       String?
+  helpText          String?         @map("help_text")
+  defaultValue      String?         @map("default_value")
+  
+  section           FormSection     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@map("form_fields")
+}
+
+model FormResponse {
+  id                String          @id @default(uuid())
+  templateId        String          @map("template_id")
+  progressNoteId    String?         @map("progress_note_id")
+  incidentReportId  String?         @map("incident_report_id")
+  userId            String          @map("user_id")
+  responseData      Json            @map("response_data") // Complete form response
+  status            String          @default("draft") // 'draft', 'submitted'
+  submittedAt       DateTime?       @map("submitted_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  template          FormTemplate    @relation(fields: [templateId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("form_responses")
+}
