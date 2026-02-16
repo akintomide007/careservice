@@ -68,7 +68,7 @@ Login to web dashboard at http://localhost:3008
 |------|-------|----------|--------------|
 | **Manager** | manager@careservice.com | manager123 | Approve notes, view all data |
 | **Admin** | admin@careservice.com | admin123 | Full system access |
-| **DSP** | dsp@careservice.com | dsp123 | Create notes, clock in/out |
+| **DSP** | dsp@careservice.com | cd | Create notes, clock in/out |
 
 ---
 

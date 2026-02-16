@@ -52,7 +52,7 @@ services:
       MAX_FILE_SIZE: 10485760
       USE_MOCK_MS365: "true"
       MOCK_DELAY_MS: 500
-      CORS_ORIGIN: http://localhost:3000,http://localhost:19006
+      CORS_ORIGIN: http://localhost:3010,http://localhost:3000,http://localhost:19006
     ports:
       - "3001:3001"
     volumes:

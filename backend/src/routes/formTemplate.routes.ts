@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { formTemplateController } from '../controllers/formTemplate.controller';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
@@ -26,6 +26,10 @@ router.put('/form-fields/:id', formTemplateController.updateField);
 router.delete('/form-fields/:id', formTemplateController.deleteField);
 
 // Response routes
+router.get('/form-responses/submitted/all', formTemplateController.getSubmittedResponses);
+router.get('/form-responses/statistics', formTemplateController.getStatistics);
+// Only managers and admins can approve/reject forms
+router.post('/form-responses/:id/approve', authorize('manager', 'admin'), formTemplateController.approveResponse);
 router.get('/form-responses', formTemplateController.getUserResponses);
 router.get('/form-responses/:id', formTemplateController.getResponseById);
 router.post('/form-responses', formTemplateController.saveResponse);

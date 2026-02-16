@@ -28,6 +28,7 @@ model User {
   digitalSignatures     DigitalSignature[]
   auditLogs             AuditLog[]
   teamsNotifications    TeamsNotification[]
+  formResponses         FormResponse[]      @relation("FormResponseUser")
 
   @@map("users")
 }
@@ -323,12 +324,13 @@ model FormResponse {
   incidentReportId  String?         @map("incident_report_id")
   userId            String          @map("user_id")
   responseData      Json            @map("response_data") // Complete form response
-  status            String          @default("draft") // 'draft', 'submitted'
+  status            String          @default("draft") // 'draft', 'submitted', 'approved', 'rejected'
   submittedAt       DateTime?       @map("submitted_at")
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
   
   template          FormTemplate    @relation(fields: [templateId], references: [id])
+  user              User            @relation("FormResponseUser", fields: [userId], references: [id])
 
   @@index([userId])
   @@index([status])

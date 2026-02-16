@@ -291,5 +291,106 @@ export const formTemplateService = {
     return prisma.formField.delete({
       where: { id: fieldId }
     });
+  },
+
+  // Get all submitted form responses (for manager approval)
+  async getSubmittedResponses(formType?: string) {
+    return prisma.formResponse.findMany({
+      where: {
+        status: 'submitted',
+        ...(formType && {
+          template: {
+            formType
+          }
+        })
+      },
+      include: {
+        template: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
+  },
+
+  // Approve form response
+  async approveFormResponse(responseId: string, approverId: string, action: 'approve' | 'reject', comment?: string) {
+    const response = await prisma.formResponse.findUnique({
+      where: { id: responseId },
+      include: { template: true }
+    });
+
+    if (!response) {
+      throw new Error('Form response not found');
+    }
+
+    // Parse existing response data and add approval metadata
+    const existingData = response.responseData as Record<string, any> || {};
+    const updatedData = {
+      ...existingData,
+      _approval: {
+        action,
+        approverId,
+        approvedAt: new Date().toISOString(),
+        comment
+      }
+    };
+
+    // Update the response status
+    const updatedResponse = await prisma.formResponse.update({
+      where: { id: responseId },
+      data: {
+        status: action === 'approve' ? 'approved' : 'rejected',
+        responseData: updatedData
+      },
+      include: {
+        template: true,
+        user: true
+      }
+    });
+
+    return updatedResponse;
+  },
+
+  // Get form response statistics
+  async getFormStatistics() {
+    const [
+      totalSubmitted,
+      totalApproved,
+      totalRejected,
+      byFormType,
+      recentSubmissions
+    ] = await Promise.all([
+      prisma.formResponse.count({ where: { status: 'submitted' } }),
+      prisma.formResponse.count({ where: { status: 'approved' } }),
+      prisma.formResponse.count({ where: { status: 'rejected' } }),
+      prisma.formResponse.groupBy({
+        by: ['status'],
+        _count: true
+      }),
+      prisma.formResponse.findMany({
+        where: { status: 'submitted' },
+        take: 10,
+        orderBy: { submittedAt: 'desc' },
+        include: {
+          template: { select: { name: true, formType: true } },
+          user: { select: { firstName: true, lastName: true } }
+        }
+      })
+    ]);
+
+    return {
+      totalSubmitted,
+      totalApproved,
+      totalRejected,
+      byFormType,
+      recentSubmissions
+    };
   }
 };

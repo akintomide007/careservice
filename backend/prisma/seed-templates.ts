@@ -24,9 +24,34 @@ async function seedFormTemplates() {
             fields: {
               create: [
                 {
+                  label: 'Individual Name',
+                  fieldType: 'text',
+                  orderIndex: 1,
+                  isRequired: true,
+                  placeholder: 'Enter individual\'s name'
+                },
+                {
+                  label: 'DOB',
+                  fieldType: 'date',
+                  orderIndex: 2,
+                  isRequired: false
+                },
+                {
+                  label: 'DDD ID',
+                  fieldType: 'text',
+                  orderIndex: 3,
+                  isRequired: false
+                },
+                {
+                  label: 'Date of Service',
+                  fieldType: 'date',
+                  orderIndex: 4,
+                  isRequired: true
+                },
+                {
                   label: 'Service Type',
                   fieldType: 'select',
-                  orderIndex: 1,
+                  orderIndex: 5,
                   isRequired: true,
                   options: JSON.stringify([
                     'Community-Based Support',
@@ -37,19 +62,79 @@ async function seedFormTemplates() {
                   ])
                 },
                 {
-                  label: 'Reason for Service',
-                  fieldType: 'select',
-                  orderIndex: 2,
+                  label: 'Start/End Time',
+                  fieldType: 'text',
+                  orderIndex: 6,
+                  isRequired: true,
+                  placeholder: '9:30 AM - 11:30 AM'
+                },
+                {
+                  label: 'Location of Service',
+                  fieldType: 'text',
+                  orderIndex: 7,
+                  isRequired: true,
+                  placeholder: 'e.g., Local Café and Grocery Store'
+                },
+                {
+                  label: 'Staff Provided',
+                  fieldType: 'text',
+                  orderIndex: 8,
+                  isRequired: true,
+                  placeholder: 'Staff Name, Title'
+                },
+                {
+                  label: 'ISP Outcome(s) Addressed',
+                  fieldType: 'textarea',
+                  orderIndex: 9,
+                  isRequired: true,
+                  placeholder: 'e.g., Increase independence in community participation'
+                }
+              ]
+            }
+          },
+          {
+            title: 'Service Strategies',
+            description: 'Check at least one; and check all that apply',
+            orderIndex: 2,
+            isRequired: true,
+            fields: {
+              create: [
+                {
+                  label: 'Service Strategies (Check at least one; and check all that apply)',
+                  fieldType: 'checkbox',
+                  orderIndex: 1,
                   isRequired: true,
                   options: JSON.stringify([
-                    'ISP goal support',
-                    'Community participation',
-                    'Social skills development',
-                    'Daily living skills',
-                    'Behavioral support',
-                    'Recreation/leisure'
+                    'Assistance with Activities of Daily Living (such as getting dressed, eating, personal hygiene, etc.)',
+                    'Assistance with Increasing Community Participation (such as daily tasks at restaurant, purchasing items, travel training, etc.)',
+                    'Assistance with Increasing Independence (such as helping the individual learn to do laundry, cook, clean, dress, grocery shop, pay for items, etc.)',
+                    'Assistance with On-The-Job Support (such as safety awareness, using the task, filling out time sheet, etc.)',
+                    'Assistance with Learning Activities (such as basic tutoring – math, reading, writing, support in attending a class, etc.)'
                   ]),
-                  helpText: 'Select the primary reason for today\'s service'
+                  helpText: 'Select all service strategies that apply to today\'s session'
+                }
+              ]
+            }
+          },
+          {
+            title: 'Daily Goal and Achievement',
+            description: 'Document the goal and if it was achieved',
+            orderIndex: 3,
+            isRequired: true,
+            fields: {
+              create: [
+                {
+                  label: 'What is your Objective/Goal for today? Was this goal achieved?',
+                  fieldType: 'textarea',
+                  orderIndex: 1,
+                  isRequired: true,
+                  placeholder: 'Describe the goal and whether it was achieved...'
+                },
+                {
+                  label: 'Date',
+                  fieldType: 'date',
+                  orderIndex: 2,
+                  isRequired: true
                 }
               ]
             }

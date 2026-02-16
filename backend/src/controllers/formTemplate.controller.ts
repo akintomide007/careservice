@@ -224,5 +224,57 @@ export const formTemplateController = {
       console.error('Error fetching response:', error);
       return res.status(500).json({ error: 'Failed to fetch response' });
     }
+  },
+
+  // GET /api/form-responses/submitted/all
+  async getSubmittedResponses(req: Request, res: Response) {
+    try {
+      const { formType } = req.query;
+      const responses = await formTemplateService.getSubmittedResponses(formType as string);
+      res.json(responses);
+    } catch (error) {
+      console.error('Error fetching submitted responses:', error);
+      res.status(500).json({ error: 'Failed to fetch submitted responses' });
+    }
+  },
+
+  // POST /api/form-responses/:id/approve
+  async approveResponse(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { action, comment } = req.body;
+      const approverId = (req as any).user?.id;
+
+      if (!approverId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      if (!action || !['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ error: 'Invalid action. Must be "approve" or "reject"' });
+      }
+
+      const response = await formTemplateService.approveFormResponse(
+        id,
+        approverId,
+        action,
+        comment
+      );
+
+      return res.json(response);
+    } catch (error: any) {
+      console.error('Error approving response:', error);
+      return res.status(500).json({ error: error.message || 'Failed to approve response' });
+    }
+  },
+
+  // GET /api/form-responses/statistics
+  async getStatistics(_req: Request, res: Response) {
+    try {
+      const stats = await formTemplateService.getFormStatistics();
+      return res.json(stats);
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+      return res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
   }
 };
