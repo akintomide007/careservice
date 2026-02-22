@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { login as loginService, createUser } from '../services/auth.service';
-import { LoginCredentials } from '../types';
+import { AuthRequest, LoginCredentials } from '../types';
 
 export async function login(req: Request, res: Response) {
   try {
@@ -17,7 +17,7 @@ export async function login(req: Request, res: Response) {
   }
 }
 
-export async function register(req: Request, res: Response) {
+export async function register(req: AuthRequest, res: Response) {
   try {
     const { email, password, firstName, lastName, role, phone } = req.body;
     
@@ -25,7 +25,10 @@ export async function register(req: Request, res: Response) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    const user = await createUser({
+    // Use organizationId from authenticated user
+    const organizationId = req.user!.organizationId;
+    
+    const user = await createUser(organizationId, {
       email,
       password,
       firstName,

@@ -73,7 +73,7 @@ async function seedFormTemplates() {
                   fieldType: 'text',
                   orderIndex: 7,
                   isRequired: true,
-                  placeholder: 'e.g., Local Café and Grocery Store'
+                  placeholder: 'e.g., Local Caf and Grocery Store'
                 },
                 {
                   label: 'Staff Provided',
@@ -109,7 +109,7 @@ async function seedFormTemplates() {
                     'Assistance with Increasing Community Participation (such as daily tasks at restaurant, purchasing items, travel training, etc.)',
                     'Assistance with Increasing Independence (such as helping the individual learn to do laundry, cook, clean, dress, grocery shop, pay for items, etc.)',
                     'Assistance with On-The-Job Support (such as safety awareness, using the task, filling out time sheet, etc.)',
-                    'Assistance with Learning Activities (such as basic tutoring – math, reading, writing, support in attending a class, etc.)'
+                    'Assistance with Learning Activities (such as basic tutoring  math, reading, writing, support in attending a class, etc.)'
                   ]),
                   helpText: 'Select all service strategies that apply to today\'s session'
                 }
@@ -418,7 +418,7 @@ async function seedFormTemplates() {
     }
   });
 
-  console.log('✅ Form templates seeded successfully!');
+  console.log(' Form templates seeded successfully!');
   console.log(`- Progress Note Template: ${cbsTemplate.id}`);
   console.log(`- Incident Report Template: ${incidentTemplate.id}`);
 }

@@ -1,14 +1,19 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, requireRole, requireManager } from '../middleware/auth';
 import { createNote, submitNote, approveNote, getNotes, getNote, updateNote } from '../controllers/progressNote.controller';
 
 const router = Router();
 
-router.post('/', authenticate, authorize('dsp', 'admin'), createNote);
-router.post('/:id/submit', authenticate, authorize('dsp', 'admin'), submitNote);
-router.post('/:id/approve', authenticate, authorize('manager', 'admin'), approveNote);
+// DSP creates and manages their own progress notes
+router.post('/', authenticate, requireRole('dsp'), createNote);
+router.put('/:id', authenticate, requireRole('dsp'), updateNote);
+router.post('/:id/submit', authenticate, requireRole('dsp'), submitNote);
+
+// Manager approves progress notes (staff supervision)
+router.post('/:id/approve', authenticate, requireManager, approveNote);
+
+// All authenticated users can view notes (filtered by permissions in controller)
 router.get('/', authenticate, getNotes);
 router.get('/:id', authenticate, getNote);
-router.put('/:id', authenticate, authorize('dsp', 'admin'), updateNote);
 
 export default router;

@@ -6,8 +6,12 @@ import { generateToken } from '../utils/jwt';
 const prisma = new PrismaClient();
 
 export async function login(credentials: LoginCredentials) {
-  const user = await prisma.user.findUnique({
-    where: { email: credentials.email },
+  // Find user with organization
+  const user = await prisma.user.findFirst({
+    where: {
+      email: credentials.email,
+      ...(credentials.organizationId && { organizationId: credentials.organizationId })
+    },
     select: {
       id: true,
       email: true,
@@ -15,7 +19,17 @@ export async function login(credentials: LoginCredentials) {
       role: true,
       firstName: true,
       lastName: true,
-      isActive: true
+      isActive: true,
+      isLandlord: true,
+      organizationId: true,
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          subdomain: true,
+          isActive: true
+        }
+      }
     }
   });
   
@@ -27,6 +41,10 @@ export async function login(credentials: LoginCredentials) {
     throw new Error('Account is inactive');
   }
   
+  if (!user.organization.isActive) {
+    throw new Error('Organization is inactive');
+  }
+  
   const isPasswordValid = await comparePassword(credentials.password, user.password);
   
   if (!isPasswordValid) {
@@ -36,7 +54,10 @@ export async function login(credentials: LoginCredentials) {
   const token = generateToken({
     userId: user.id,
     email: user.email,
-    role: user.role
+    role: user.role,
+    organizationId: user.organizationId,
+    organizationName: user.organization.name,
+    isLandlord: user.isLandlord
   });
   
   return {
@@ -46,38 +67,51 @@ export async function login(credentials: LoginCredentials) {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role
+      role: user.role,
+      organizationId: user.organizationId,
+      organizationName: user.organization.name,
+      isLandlord: user.isLandlord
     }
   };
 }
 
-export async function createUser(data: {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  phone?: string;
-}) {
+export async function createUser(
+  organizationId: string,
+  data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    phone?: string;
+  }
+) {
+  // Check if user exists in this organization
   const existingUser = await prisma.user.findUnique({
-    where: { email: data.email }
+    where: {
+      email_organizationId: {
+        email: data.email,
+        organizationId
+      }
+    }
   });
   
   if (existingUser) {
-    throw new Error('User with this email already exists');
+    throw new Error('User with this email already exists in this organization');
   }
   
   const hashedPassword = await hashPassword(data.password);
   
   const user = await prisma.user.create({
     data: {
+      organizationId,
       email: data.email,
       password: hashedPassword,
       firstName: data.firstName,
       lastName: data.lastName,
       role: data.role,
       phone: data.phone,
-      azureAdId: `local-${Date.now()}`
+      azureAdId: `local-${organizationId}-${Date.now()}`
     },
     select: {
       id: true,
@@ -86,6 +120,7 @@ export async function createUser(data: {
       lastName: true,
       role: true,
       phone: true,
+      organizationId: true,
       createdAt: true
     }
   });

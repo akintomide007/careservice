@@ -1,0 +1,10 @@
+
+> care-provider-backend@1.0.0 build
+> tsc
+
+src/routes/admin.routes.ts(20,69): error TS6133: 'req' is declared but its value is never read.
+src/routes/admin.routes.ts(24,18): error TS2353: Object literal may only specify known properties, and 'createdAt' does not exist in type 'UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]'.
+src/routes/admin.routes.ts(36,18): error TS2353: Object literal may only specify known properties, and 'createdAt' does not exist in type 'UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]'.
+src/routes/admin.routes.ts(86,7): error TS2322: Type '{ email: any; password: string; firstName: any; lastName: any; role: any; organizationId: any; isActive: true; }' is not assignable to type '(Without<UserCreateInput, UserUncheckedCreateInput> & UserUncheckedCreateInput) | (Without<...> & UserCreateInput)'.
+  Type '{ email: any; password: string; firstName: any; lastName: any; role: any; organizationId: any; isActive: true; }' is not assignable to type 'Without<UserUncheckedCreateInput, UserCreateInput> & UserCreateInput'.
+    Type '{ email: any; password: string; firstName: any; lastName: any; role: any; organizationId: any; isActive: true; }' is missing the following properties from type 'UserCreateInput': azureAdId, organization

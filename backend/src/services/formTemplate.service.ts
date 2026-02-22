@@ -4,9 +4,10 @@ const prisma = new PrismaClient();
 
 export const formTemplateService = {
   // Get all active templates
-  async getTemplates(formType?: string) {
+  async getTemplates(organizationId: string, formType?: string) {
     return prisma.formTemplate.findMany({
       where: {
+        organizationId,
         isActive: true,
         ...(formType && { formType })
       },
@@ -25,9 +26,12 @@ export const formTemplateService = {
   },
 
   // Get template by ID with full details
-  async getTemplateById(id: string) {
-    return prisma.formTemplate.findUnique({
-      where: { id },
+  async getTemplateById(id: string, organizationId: string) {
+    return prisma.formTemplate.findFirst({
+      where: {
+        id,
+        organizationId
+      },
       include: {
         sections: {
           orderBy: { orderIndex: 'asc' },
@@ -42,9 +46,10 @@ export const formTemplateService = {
   },
 
   // Get default template for a form type
-  async getDefaultTemplate(formType: string, serviceType?: string) {
+  async getDefaultTemplate(organizationId: string, formType: string, serviceType?: string) {
     return prisma.formTemplate.findFirst({
       where: {
+        organizationId,
         formType,
         isActive: true,
         isDefault: true,
@@ -64,9 +69,10 @@ export const formTemplateService = {
   },
 
   // Create new template
-  async createTemplate(data: any) {
+  async createTemplate(organizationId: string, data: any) {
     return prisma.formTemplate.create({
       data: {
+        organizationId,
         name: data.name,
         description: data.description,
         formType: data.formType,

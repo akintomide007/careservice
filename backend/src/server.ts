@@ -9,6 +9,16 @@ import sessionRoutes from './routes/session.routes';
 import progressNoteRoutes from './routes/progressNote.routes';
 import incidentRoutes from './routes/incident.routes';
 import formTemplateRoutes from './routes/formTemplate.routes';
+import taskRoutes from './routes/task.routes';
+import violationRoutes from './routes/violation.routes';
+import serviceStrategyRoutes from './routes/serviceStrategy.routes';
+import scheduleRoutes from './routes/schedule.routes';
+import appointmentRequestRoutes from './routes/appointmentRequest.routes';
+import adminRoutes from './routes/admin.routes';
+import supportRoutes from './routes/support.routes';
+import notificationRoutes from './routes/notification.routes';
+import ispGoalRoutes from './routes/ispGoal.routes';
+import assignmentRoutes from './routes/assignment.routes';
 
 const app = express();
 
@@ -27,6 +37,16 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/progress-notes', progressNoteRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api', formTemplateRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/violations', violationRoutes);
+app.use('/api/service-strategies', serviceStrategyRoutes);
+app.use('/api/schedules', scheduleRoutes);
+app.use('/api/appointment-requests', appointmentRequestRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/isp', ispGoalRoutes);
+app.use('/api', assignmentRoutes);
 
 app.use(errorHandler);
 

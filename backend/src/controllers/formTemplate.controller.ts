@@ -1,12 +1,14 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../types';
 import { formTemplateService } from '../services/formTemplate.service';
 
 export const formTemplateController = {
   // GET /api/form-templates
-  async getTemplates(req: Request, res: Response) {
+  async getTemplates(req: AuthRequest, res: Response) {
     try {
       const { formType } = req.query;
-      const templates = await formTemplateService.getTemplates(formType as string);
+      const organizationId = req.user!.organizationId;
+      const templates = await formTemplateService.getTemplates(organizationId, formType as string);
       res.json(templates);
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -15,10 +17,11 @@ export const formTemplateController = {
   },
 
   // GET /api/form-templates/:id
-  async getTemplateById(req: Request, res: Response) {
+  async getTemplateById(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const template = await formTemplateService.getTemplateById(id);
+      const organizationId = req.user!.organizationId;
+      const template = await formTemplateService.getTemplateById(id, organizationId);
       
       if (!template) {
         return res.status(404).json({ error: 'Template not found' });
@@ -32,12 +35,14 @@ export const formTemplateController = {
   },
 
   // GET /api/form-templates/default/:formType
-  async getDefaultTemplate(req: Request, res: Response) {
+  async getDefaultTemplate(req: AuthRequest, res: Response) {
     try {
       const { formType } = req.params;
       const { serviceType } = req.query;
+      const organizationId = req.user!.organizationId;
       
       const template = await formTemplateService.getDefaultTemplate(
+        organizationId,
         formType,
         serviceType as string
       );
@@ -54,10 +59,11 @@ export const formTemplateController = {
   },
 
   // POST /api/form-templates
-  async createTemplate(req: Request, res: Response) {
+  async createTemplate(req: AuthRequest, res: Response) {
     try {
-      const userId = (req as any).user?.id;
-      const template = await formTemplateService.createTemplate({
+      const userId = req.user!.id;
+      const organizationId = req.user!.organizationId;
+      const template = await formTemplateService.createTemplate(organizationId, {
         ...req.body,
         createdBy: userId
       });

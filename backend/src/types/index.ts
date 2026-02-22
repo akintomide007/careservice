@@ -1,25 +1,58 @@
 import { Request } from 'express';
+import { Organization } from '@prisma/client';
 
+// Multi-tenant types
 export interface AuthUser {
   id: string;
+  userId: string; // Alias for id for consistency
   email: string;
   role: string;
   azureAdId: string;
+  isLandlord?: boolean;
+  organizationId: string;
+  organizationName: string;
 }
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
+  organization?: Organization;
 }
 
 export interface LoginCredentials {
   email: string;
   password: string;
+  organizationId?: string;
 }
 
 export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
+  organizationId: string;
+  organizationName: string;
+  isLandlord?: boolean;
+}
+export interface OrganizationSettings {
+  features?: {
+    incidentReporting?: boolean;
+    gpsTracking?: boolean;
+    digitalSignatures?: boolean;
+    formBuilder?: boolean;
+  };
+  compliance?: {
+    requireDualApproval?: boolean;
+    mandatoryGPS?: boolean;
+    photoRequirement?: 'optional' | 'required' | 'disabled';
+  };
+  branding?: {
+    primaryColor?: string;
+    logo?: string;
+    emailFooter?: string;
+  };
+  limits?: {
+    maxStorageMB?: number;
+    maxUsersPerClient?: number;
+  };
 }
 
 export interface ClockInData {

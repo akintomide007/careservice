@@ -7,19 +7,57 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Multi-Tenant: Organization Model
+model Organization {
+  id                String              @id @default(uuid())
+  name              String
+  subdomain         String              @unique
+  domain            String?
+  logo              String?
+  primaryColor      String?             @default("#3B82F6")
+  isActive          Boolean             @default(true) @map("is_active")
+  plan              String              @default("basic")
+  maxUsers          Int                 @default(50) @map("max_users")
+  maxClients        Int                 @default(100) @map("max_clients")
+  billingStatus     String              @default("active") @map("billing_status") // 'active', 'suspended', 'cancelled'
+  billingEmail      String?             @map("billing_email")
+  subscriptionStart DateTime?           @map("subscription_start")
+  subscriptionEnd   DateTime?           @map("subscription_end")
+  lastActivityAt    DateTime?           @map("last_activity_at")
+  totalUsers        Int                 @default(0) @map("total_users")
+  totalClients      Int                 @default(0) @map("total_clients")
+  storageUsedMB     Int                 @default(0) @map("storage_used_mb")
+  settings          Json?
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  
+  users             User[]
+  clients           Client[]
+  formTemplates     FormTemplate[]
+  auditLogs         AuditLog[]
+  supportTickets    SupportTicket[]
+  usageMetrics      UsageMetric[]
+  notifications     Notification[]
+
+  @@map("organizations")
+}
+
 model User {
   id                    String              @id @default(uuid())
-  azureAdId             String              @unique @map("azure_ad_id")
-  email                 String              @unique
+  organizationId        String              @map("organization_id")
+  azureAdId             String              @map("azure_ad_id")
+  email                 String
   password              String
   firstName             String              @map("first_name")
   lastName              String              @map("last_name")
   role                  String
   phone                 String?
+  isLandlord            Boolean             @default(false) @map("is_landlord")
   isActive              Boolean             @default(true) @map("is_active")
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
   
+  organization          Organization        @relation(fields: [organizationId], references: [id])
   serviceSessions       ServiceSession[]
   progressNotes         ProgressNote[]
   incidentReports       IncidentReport[]
@@ -29,30 +67,98 @@ model User {
   auditLogs             AuditLog[]
   teamsNotifications    TeamsNotification[]
   formResponses         FormResponse[]      @relation("FormResponseUser")
+  ispActivities         IspActivity[]
+  tasksAssigned         Task[]              @relation("TaskAssignee")
+  tasksCreated          Task[]              @relation("TaskAssigner")
+  taskResultsVerified   TaskResult[]        @relation("TaskResultVerifier")
+  violations            Violation[]         @relation("ViolationUser")
+  violationsReported    Violation[]         @relation("ViolationReporter")
+  violationsResolved    Violation[]         @relation("ViolationResolver")
+  schedules             Schedule[]          @relation("ScheduleUser")
+  schedulesCreated      Schedule[]          @relation("ScheduleCreator")
+  appointmentRequests   AppointmentRequest[] @relation("AppointmentRequester")
+  appointmentReviews    AppointmentRequest[] @relation("AppointmentReviewer")
+  ticketsReported       SupportTicket[]     @relation("TicketReporter")
+  ticketsAssigned       SupportTicket[]     @relation("TicketAssignee")
+  ticketComments        TicketComment[]
+  notifications         Notification[]
+  notificationPreference NotificationPreference?
 
+  @@unique([email, organizationId])
+  @@unique([azureAdId, organizationId])
+  @@index([organizationId])
   @@map("users")
 }
 
 model Client {
-  id                      String          @id @default(uuid())
-  firstName               String          @map("first_name")
-  lastName                String          @map("last_name")
-  dateOfBirth             DateTime?       @map("date_of_birth") @db.Date
-  dddId                   String?         @unique @map("ddd_id")
+  id                      String              @id @default(uuid())
+  organizationId          String              @map("organization_id")
+  firstName               String              @map("first_name")
+  lastName                String              @map("last_name")
+  dateOfBirth             DateTime?           @map("date_of_birth") @db.Date
+  dddId                   String?             @map("ddd_id")
   address                 String?
-  emergencyContactName    String?         @map("emergency_contact_name")
-  emergencyContactPhone   String?         @map("emergency_contact_phone")
-  photoUrl                String?         @map("photo_url")
-  isActive                Boolean         @default(true) @map("is_active")
-  createdAt               DateTime        @default(now()) @map("created_at")
-  updatedAt               DateTime        @updatedAt @map("updated_at")
+  emergencyContactName    String?             @map("emergency_contact_name")
+  emergencyContactPhone   String?             @map("emergency_contact_phone")
+  photoUrl                String?             @map("photo_url")
+  isActive                Boolean             @default(true) @map("is_active")
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
   
+  organization            Organization        @relation(fields: [organizationId], references: [id])
   ispOutcomes             IspOutcome[]
   serviceSessions         ServiceSession[]
   progressNotes           ProgressNote[]
   incidentReports         IncidentReport[]
+  tasks                   Task[]
+  violations              Violation[]
+  schedules               Schedule[]
+  appointmentRequests     AppointmentRequest[]
+  dspAssignments          ClientDspAssignment[]
 
+  @@unique([dddId, organizationId])
+  @@index([organizationId])
   @@map("clients")
+}
+
+// DSP-Manager Assignment System (Admins assign DSPs to Managers)
+model DspManagerAssignment {
+  id                String          @id @default(uuid())
+  dspId             String          @map("dsp_id")
+  managerId         String          @map("manager_id")
+  assignedBy        String          @map("assigned_by")
+  startDate         DateTime        @default(now()) @map("start_date")
+  endDate           DateTime?       @map("end_date")
+  isActive          Boolean         @default(true) @map("is_active")
+  notes             String?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  @@index([dspId])
+  @@index([managerId])
+  @@index([isActive])
+  @@map("dsp_manager_assignments")
+}
+
+// Client-DSP Assignment System (Managers assign Clients to DSPs)
+model ClientDspAssignment {
+  id                String          @id @default(uuid())
+  clientId          String          @map("client_id")
+  dspId             String          @map("dsp_id")
+  assignedBy        String          @map("assigned_by")
+  startDate         DateTime        @default(now()) @map("start_date")
+  endDate           DateTime?       @map("end_date")
+  isActive          Boolean         @default(true) @map("is_active")
+  notes             String?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  @@index([clientId])
+  @@index([dspId])
+  @@index([isActive])
+  @@map("client_dsp_assignments")
 }
 
 model IspOutcome {
@@ -62,13 +168,92 @@ model IspOutcome {
   category              String?
   targetDate            DateTime?       @map("target_date") @db.Date
   status                String          @default("active")
+  overallProgress       Int             @default(0) @map("overall_progress")
+  lastReviewDate        DateTime?       @map("last_review_date")
+  nextReviewDate        DateTime?       @map("next_review_date")
+  reviewFrequency       String?         @map("review_frequency")
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
   
   client                Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   progressNotes         ProgressNote[]
+  goals                 IspGoal[]
 
   @@map("isp_outcomes")
+}
+
+model IspGoal {
+  id                    String              @id @default(uuid())
+  outcomeId             String              @map("outcome_id")
+  title                 String
+  description           String?
+  goalType              String              @map("goal_type")
+  measurementCriteria   Json?               @map("measurement_criteria")
+  targetDate            DateTime?           @map("target_date")
+  frequency             String?
+  status                String              @default("active")
+  priority              String              @default("medium")
+  progressPercentage    Int                 @default(0) @map("progress_percentage")
+  completedAt           DateTime?           @map("completed_at")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  
+  outcome               IspOutcome          @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+  milestones            IspMilestone[]
+  activities            IspActivity[]
+  progressNotes         ProgressNote[]
+
+  @@index([outcomeId])
+  @@index([status])
+  @@map("isp_goals")
+}
+
+model IspMilestone {
+  id                    String              @id @default(uuid())
+  goalId                String              @map("goal_id")
+  title                 String
+  description           String?
+  targetDate            DateTime            @map("target_date")
+  completionCriteria    String              @map("completion_criteria")
+  status                String              @default("pending")
+  achievedDate          DateTime?           @map("achieved_date")
+  notes                 String?
+  orderIndex            Int                 @default(1) @map("order_index")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  
+  goal                  IspGoal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([status])
+  @@map("isp_milestones")
+}
+
+model IspActivity {
+  id                    String              @id @default(uuid())
+  goalId                String              @map("goal_id")
+  progressNoteId        String?             @map("progress_note_id")
+  staffId               String              @map("staff_id")
+  activityDate          DateTime            @map("activity_date")
+  activityType          String              @map("activity_type")
+  description           String
+  duration              Int?
+  prompts               Json?
+  successLevel          String?             @map("success_level")
+  observations          String?
+  barriers              String?
+  modifications         String?
+  progressRating        Int?                @map("progress_rating")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  
+  goal                  IspGoal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  progressNote          ProgressNote?       @relation(fields: [progressNoteId], references: [id])
+  staff                 User                @relation(fields: [staffId], references: [id])
+
+  @@index([goalId])
+  @@index([staffId])
+  @@index([activityDate])
+  @@map("isp_activities")
 }
 
 model ServiceSession {
@@ -108,6 +293,7 @@ model ProgressNote {
   endTime               DateTime                    @map("end_time") @db.Time(6)
   location              String?
   ispOutcomeId          String?                     @map("isp_outcome_id")
+  ispGoalId             String?                     @map("isp_goal_id")
   reasonForService      String?                     @map("reason_for_service")
   supportsProvided      String?                     @map("supports_provided")
   individualResponse    Json?                       @map("individual_response")
@@ -129,8 +315,10 @@ model ProgressNote {
   client                Client                      @relation(fields: [clientId], references: [id])
   staff                 User                        @relation(fields: [staffId], references: [id])
   ispOutcome            IspOutcome?                 @relation(fields: [ispOutcomeId], references: [id])
+  ispGoal               IspGoal?                    @relation(fields: [ispGoalId], references: [id])
   approver              User?                       @relation("ApprovedByUser", fields: [approvedBy], references: [id])
   activities            ProgressNoteActivity[]
+  ispActivities         IspActivity[]
   mediaAttachments      MediaAttachment[]
   digitalSignatures     DigitalSignature[]
   teamsNotifications    TeamsNotification[]
@@ -229,18 +417,21 @@ model DigitalSignature {
 }
 
 model AuditLog {
-  id          String    @id @default(uuid())
-  userId      String?   @map("user_id")
-  action      String
-  entityType  String?   @map("entity_type")
-  entityId    String?   @map("entity_id")
-  changes     Json?
-  ipAddress   String?   @map("ip_address")
-  userAgent   String?   @map("user_agent")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id              String        @id @default(uuid())
+  organizationId  String?       @map("organization_id")
+  userId          String?       @map("user_id")
+  action          String
+  entityType      String?       @map("entity_type")
+  entityId        String?       @map("entity_id")
+  changes         Json?
+  ipAddress       String?       @map("ip_address")
+  userAgent       String?       @map("user_agent")
+  createdAt       DateTime      @default(now()) @map("created_at")
   
-  user        User?     @relation(fields: [userId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  user            User?         @relation(fields: [userId], references: [id])
 
+  @@index([organizationId])
   @@map("audit_logs")
 }
 
@@ -266,6 +457,7 @@ model TeamsNotification {
 // Survey/Form Template System
 model FormTemplate {
   id                String          @id @default(uuid())
+  organizationId    String          @map("organization_id")
   name              String
   description       String?
   formType          String          @map("form_type") // 'progress_note', 'incident_report'
@@ -277,9 +469,11 @@ model FormTemplate {
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
   
+  organization      Organization    @relation(fields: [organizationId], references: [id])
   sections          FormSection[]
   responses         FormResponse[]
 
+  @@index([organizationId])
   @@map("form_templates")
 }
 
@@ -335,4 +529,316 @@ model FormResponse {
   @@index([userId])
   @@index([status])
   @@map("form_responses")
+}
+
+// Task Management System
+model Task {
+  id                String          @id @default(uuid())
+  organizationId    String          @map("organization_id")
+  assignedTo        String          @map("assigned_to")
+  assignedBy        String          @map("assigned_by")
+  clientId          String?         @map("client_id")
+  taskType          String          @map("task_type")
+  title             String
+  description       String?
+  priority          String          @default("medium")
+  status            String          @default("pending")
+  dueDate           DateTime        @map("due_date")
+  startedAt         DateTime?       @map("started_at")
+  completedAt       DateTime?       @map("completed_at")
+  estimatedHours    Float?          @map("estimated_hours")
+  actualHours       Float?          @map("actual_hours")
+  completionNotes   String?         @map("completion_notes")
+  attachments       Json?
+  reminders         Json?
+  recurring         Boolean         @default(false)
+  recurringPattern  String?         @map("recurring_pattern")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  assignee          User            @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  assigner          User            @relation("TaskAssigner", fields: [assignedBy], references: [id])
+  client            Client?         @relation(fields: [clientId], references: [id])
+  results           TaskResult[]
+  checklistItems    TaskChecklist[]
+  violations        Violation[]
+  
+  @@index([organizationId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model TaskResult {
+  id                String          @id @default(uuid())
+  taskId            String          @map("task_id")
+  resultType        String          @map("result_type")
+  description       String
+  metrics           Json?
+  evidence          Json?
+  verifiedBy        String?         @map("verified_by")
+  verifiedAt        DateTime?       @map("verified_at")
+  notes             String?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  
+  task              Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  verifier          User?           @relation("TaskResultVerifier", fields: [verifiedBy], references: [id])
+  
+  @@index([taskId])
+  @@map("task_results")
+}
+
+model TaskChecklist {
+  id                String          @id @default(uuid())
+  taskId            String          @map("task_id")
+  title             String
+  isCompleted       Boolean         @default(false) @map("is_completed")
+  completedAt       DateTime?       @map("completed_at")
+  orderIndex        Int             @default(1) @map("order_index")
+  
+  task              Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@map("task_checklist")
+}
+
+model Violation {
+  id                String          @id @default(uuid())
+  organizationId    String          @map("organization_id")
+  userId            String          @map("user_id")
+  reportedBy        String          @map("reported_by")
+  violationType     String          @map("violation_type")
+  severity          String
+  status            String          @default("open")
+  incidentDate      DateTime        @map("incident_date")
+  description       String
+  evidence          Json?
+  clientId          String?         @map("client_id")
+  taskId            String?         @map("task_id")
+  correctiveAction  String?         @map("corrective_action")
+  resolution        String?
+  resolvedBy        String?         @map("resolved_by")
+  resolvedAt        DateTime?       @map("resolved_at")
+  points            Int             @default(0)
+  isAppealed        Boolean         @default(false) @map("is_appealed")
+  appealNotes       String?         @map("appeal_notes")
+  appealResolvedBy  String?         @map("appeal_resolved_by")
+  appealResolvedAt  DateTime?       @map("appeal_resolved_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  violator          User            @relation("ViolationUser", fields: [userId], references: [id])
+  reporter          User            @relation("ViolationReporter", fields: [reportedBy], references: [id])
+  resolver          User?           @relation("ViolationResolver", fields: [resolvedBy], references: [id])
+  client            Client?         @relation(fields: [clientId], references: [id])
+  task              Task?           @relation(fields: [taskId], references: [id])
+  
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@index([severity])
+  @@map("violations")
+}
+
+model ServiceStrategy {
+  id                String          @id @default(uuid())
+  organizationId    String          @map("organization_id")
+  category          String
+  name              String
+  description       String?
+  isActive          Boolean         @default(true) @map("is_active")
+  orderIndex        Int             @default(1) @map("order_index")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  
+  @@index([organizationId])
+  @@index([category])
+  @@map("service_strategies")
+}
+
+// Scheduling System
+model Schedule {
+  id                String                @id @default(uuid())
+  organizationId    String                @map("organization_id")
+  userId            String                @map("user_id")
+  clientId          String?               @map("client_id")
+  title             String
+  shiftType         String                @map("shift_type") // 'work', 'training', 'meeting', 'time_off'
+  startTime         DateTime              @map("start_time")
+  endTime           DateTime              @map("end_time")
+  isAllDay          Boolean               @default(false) @map("is_all_day")
+  location          String?
+  notes             String?
+  status            String                @default("scheduled") // 'scheduled', 'completed', 'cancelled'
+  recurrence        String?               // 'daily', 'weekly', 'biweekly', 'monthly'
+  recurrenceEnd     DateTime?             @map("recurrence_end")
+  color             String?
+  createdBy         String                @map("created_by")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  
+  user              User                  @relation("ScheduleUser", fields: [userId], references: [id])
+  client            Client?               @relation(fields: [clientId], references: [id])
+  creator           User                  @relation("ScheduleCreator", fields: [createdBy], references: [id])
+  appointmentRequest AppointmentRequest?  @relation("ScheduleAppointment")
+  
+  @@index([organizationId])
+  @@index([userId])
+  @@index([startTime])
+  @@index([endTime])
+  @@map("schedules")
+}
+
+// Appointment Request System
+model AppointmentRequest {
+  id                String          @id @default(uuid())
+  organizationId    String          @map("organization_id")
+  clientId          String          @map("client_id")
+  requestedBy       String          @map("requested_by")
+  appointmentType   String          @map("appointment_type") // 'medical', 'therapy', 'social', 'dental', etc.
+  urgency           String          @default("routine") // 'routine', 'urgent', 'emergency'
+  reason            String
+  notes             String?
+  preferredDates    Json            @map("preferred_dates") // Array of date options
+  preferredTimes    Json?           @map("preferred_times") // Time preferences
+  location          String?
+  provider          String?         // Doctor/therapist name
+  providerPhone     String?         @map("provider_phone")
+  transportation    String?         // 'self', 'family', 'needs_transport'
+  status            String          @default("pending") // 'pending', 'approved', 'rejected', 'scheduled', 'cancelled'
+  reviewedBy        String?         @map("reviewed_by")
+  reviewedAt        DateTime?       @map("reviewed_at")
+  reviewNotes       String?         @map("review_notes")
+  scheduledDate     DateTime?       @map("scheduled_date")
+  scheduleId        String?         @unique @map("schedule_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  requester         User            @relation("AppointmentRequester", fields: [requestedBy], references: [id])
+  reviewer          User?           @relation("AppointmentReviewer", fields: [reviewedBy], references: [id])
+  schedule          Schedule?       @relation("ScheduleAppointment", fields: [scheduleId], references: [id])
+  
+  @@index([organizationId])
+  @@index([clientId])
+  @@index([requestedBy])
+  @@index([status])
+  @@index([urgency])
+  @@map("appointment_requests")
+}
+
+// Support Ticket System
+model SupportTicket {
+  id                String              @id @default(uuid())
+  organizationId    String              @map("organization_id")
+  title             String
+  description       String
+  priority          String              @default("medium") // 'low', 'medium', 'high', 'critical'
+  status            String              @default("open") // 'open', 'in_progress', 'resolved', 'closed'
+  category          String              // 'technical', 'billing', 'feature_request', 'other'
+  reportedBy        String              @map("reported_by")
+  assignedTo        String?             @map("assigned_to")
+  resolution        String?
+  attachments       Json?
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  resolvedAt        DateTime?           @map("resolved_at")
+  
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  reporter          User                @relation("TicketReporter", fields: [reportedBy], references: [id])
+  assignee          User?               @relation("TicketAssignee", fields: [assignedTo], references: [id])
+  comments          TicketComment[]
+  
+  @@index([organizationId])
+  @@index([status])
+  @@index([priority])
+  @@map("support_tickets")
+}
+
+model TicketComment {
+  id                String              @id @default(uuid())
+  ticketId          String              @map("ticket_id")
+  userId            String              @map("user_id")
+  comment           String
+  isInternal        Boolean             @default(false) @map("is_internal") // Only visible to admins
+  createdAt         DateTime            @default(now()) @map("created_at")
+  
+  ticket            SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user              User                @relation(fields: [userId], references: [id])
+  
+  @@index([ticketId])
+  @@map("ticket_comments")
+}
+
+model UsageMetric {
+  id                String              @id @default(uuid())
+  organizationId    String              @map("organization_id")
+  metricType        String              @map("metric_type") // 'users', 'clients', 'sessions', 'storage_mb', 'api_calls'
+  value             Int
+  recordedAt        DateTime            @default(now()) @map("recorded_at")
+  
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  
+  @@index([organizationId])
+  @@index([metricType])
+  @@index([recordedAt])
+  @@map("usage_metrics")
+}
+
+// Notification System
+model Notification {
+  id                String              @id @default(uuid())
+  organizationId    String              @map("organization_id")
+  userId            String              @map("user_id") // Recipient
+  type              String              // 'appointment_request', 'ticket_update', 'task_assigned', etc.
+  title             String
+  message           String
+  actionUrl         String?             @map("action_url") // Where to navigate when clicked
+  actionLabel       String?             @map("action_label") // Button text
+  relatedId         String?             @map("related_id") // ID of related resource
+  relatedType       String?             @map("related_type") // Type of related resource
+  isRead            Boolean             @default(false) @map("is_read")
+  isEmailed         Boolean             @default(false) @map("is_emailed")
+  priority          String              @default("normal") // 'low', 'normal', 'high', 'urgent'
+  metadata          Json?               // Additional context
+  createdAt         DateTime            @default(now()) @map("created_at")
+  readAt            DateTime?           @map("read_at")
+  
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  user              User                @relation(fields: [userId], references: [id])
+  
+  @@index([userId, isRead])
+  @@index([organizationId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                    String          @id @default(uuid())
+  userId                String          @unique @map("user_id")
+  
+  // Notification channels
+  emailEnabled          Boolean         @default(true) @map("email_enabled")
+  inAppEnabled          Boolean         @default(true) @map("in_app_enabled")
+  
+  // Event types
+  appointmentRequests   Boolean         @default(true) @map("appointment_requests")
+  appointmentApprovals  Boolean         @default(true) @map("appointment_approvals")
+  taskAssignments       Boolean         @default(true) @map("task_assignments")
+  scheduleChanges       Boolean         @default(true) @map("schedule_changes")
+  incidentReports       Boolean         @default(true) @map("incident_reports")
+  ticketUpdates         Boolean         @default(true) @map("ticket_updates")
+  violationAlerts       Boolean         @default(true) @map("violation_alerts")
+  systemAnnouncements   Boolean         @default(true) @map("system_announcements")
+  
+  // Timing
+  quietHoursStart       String?         @map("quiet_hours_start") // "22:00"
+  quietHoursEnd         String?         @map("quiet_hours_end") // "08:00"
+  digestFrequency       String          @default("never") @map("digest_frequency") // 'never', 'daily', 'weekly'
+  
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+  
+  user                  User            @relation(fields: [userId], references: [id])
+  
+  @@map("notification_preferences")
 }

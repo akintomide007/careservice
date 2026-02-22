@@ -2,11 +2,16 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function getAllClients(filters?: {
-  search?: string;
-  isActive?: boolean;
-}) {
-  const where: any = {};
+export async function getAllClients(
+  organizationId: string,
+  filters?: {
+    search?: string;
+    isActive?: boolean;
+  }
+) {
+  const where: any = {
+    organizationId
+  };
   
   if (filters?.isActive !== undefined) {
     where.isActive = filters.isActive;
@@ -39,9 +44,12 @@ export async function getAllClients(filters?: {
   });
 }
 
-export async function getClientById(id: string) {
-  return prisma.client.findUnique({
-    where: { id },
+export async function getClientById(id: string, organizationId: string) {
+  return prisma.client.findFirst({
+    where: {
+      id,
+      organizationId
+    },
     include: {
       ispOutcomes: true,
       serviceSessions: {
@@ -66,35 +74,46 @@ export async function getClientById(id: string) {
   });
 }
 
-export async function createClient(data: {
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string;
-  dddId?: string;
-  address?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-}) {
+export async function createClient(
+  organizationId: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth?: string;
+    dddId?: string;
+    address?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+  }
+) {
   return prisma.client.create({
     data: {
+      organizationId,
       ...data,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined
     }
   });
 }
 
-export async function updateClient(id: string, data: {
-  firstName?: string;
-  lastName?: string;
-  dateOfBirth?: string;
-  dddId?: string;
-  address?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  isActive?: boolean;
-}) {
-  return prisma.client.update({
-    where: { id },
+export async function updateClient(
+  id: string,
+  organizationId: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    dddId?: string;
+    address?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    isActive?: boolean;
+  }
+) {
+  return prisma.client.updateMany({
+    where: {
+      id,
+      organizationId
+    },
     data: {
       ...data,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined
@@ -102,8 +121,11 @@ export async function updateClient(id: string, data: {
   });
 }
 
-export async function deleteClient(id: string) {
-  return prisma.client.delete({
-    where: { id }
+export async function deleteClient(id: string, organizationId: string) {
+  return prisma.client.deleteMany({
+    where: {
+      id,
+      organizationId
+    }
   });
 }

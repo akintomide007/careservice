@@ -5,6 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.pnp
+.pnp.js
 
 # Environment Variables
 .env
@@ -13,6 +15,7 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.*.local
+*.env
 
 # Build outputs
 dist/
@@ -21,11 +24,14 @@ out/
 .next/
 *.tsbuildinfo
 next-env.d.ts
+.turbo/
 
 # Testing
 coverage/
 *.lcov
 .nyc_output/
+jest-coverage/
+.jest/
 
 # Logs
 logs/
@@ -34,6 +40,9 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Temporary files
 tmp/
@@ -42,6 +51,7 @@ temp/
 *.swp
 *.swo
 *~
+.cache/
 
 # OS Files
 .DS_Store
@@ -52,6 +62,7 @@ temp/
 ehthumbs.db
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
 # IDE & Editor Files
 .idea/
@@ -65,29 +76,47 @@ desktop.ini
 *.launch
 .settings/
 *.code-workspace
+.history/
+*.swp
+*.swo
+*~
 
 # Docker
 .dockerignore
 docker-compose.override.yml
+*.docker
 
 # Database
 *.sqlite
 *.sqlite3
 *.db
+*.db-journal
 
 # Uploads and user-generated content
 backend/uploads/*
 !backend/uploads/.gitkeep
 uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp4
+*.mov
+*.pdf
+# But keep example/placeholder images if needed
+!**/examples/*.jpg
+!**/examples/*.png
 
 # Prisma
 prisma/migrations/*_dev/
 .env.test
+**/prisma/.env
 
 # TypeScript
 *.tsbuildinfo
+.tsbuildinfo
 
-# Mobile/React Native
+# Mobile/React Native/Expo
 .expo/
 .expo-shared/
 *.jks
@@ -97,8 +126,72 @@ prisma/migrations/*_dev/
 *.mobileprovision
 *.orig.*
 web-build/
+android/
+ios/
+# Keep specific config files
+!android/app/
+!ios/careapp/
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.yarn/
+.pnpm/
 
 # Misc
 *.pem
 .vercel
 .turbo
+.contentlayer
+.env.vault
+
+# Backup files
+*.bak
+*.backup
+*~
+*.backup.*
+**/*.backup
+
+# Documentation drafts (keep published docs)
+**/DRAFT_*.md
+**/WIP_*.md
+
+# Local dev files
+.local/
+scratch/
+sandbox/
+
+# Build artifacts
+*.map
+*.map.js
+
+# Security
+.npmrc
+.yarnrc
+*.key
+*.cert
+*.csr
+
+# Sentry
+.sentryclirc
+
+# Vercel
+.vercel
+
+# PWA
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
+
+# Generated files
+generated/
+auto-generated/
+
+# Lock files (optional - uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
