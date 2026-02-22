@@ -65,10 +65,10 @@ Login to web dashboard at **http://localhost:3010**
 
 | Role | Email | Password | Access Level |
 |------|-------|----------|--------------|
-| **Super Admin** | landlord@platform.com | landlord123 | Platform-wide oversight, all organizations |
-| **Org Admin** | admin@acme.com | admin123 | Full org access, user management |
-| **Manager** | manager@acme.com | manager123 | Team supervision, approvals |
-| **DSP** | dsp@acme.com | dsp123 | Direct care, progress notes |
+| **Super Admin** | landlord@careservice.com | landlord123 | Platform-wide oversight, all organizations |
+| **Org Admin** | admin@careservice.com | admin123 | Full org access, user management |
+| **Manager** | manager@careservice.com | manager123 | Team supervision, approvals |
+| **DSP** | dsp@careservice.com | dsp123 | Direct care, progress notes |
 
 ---
 
