@@ -3,11 +3,11 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
 } from 'react-native';
+import VoiceToTextInput from './VoiceToTextInput';
 
 interface FormField {
   id: string;
@@ -187,28 +187,27 @@ export default function DynamicForm({
       case 'text':
       case 'date':
         return (
-          <TextInput
-            style={[styles.input, error && styles.inputError]}
+          <VoiceToTextInput
             value={value}
-            onChangeText={(text) =>
+            onChange={(text) =>
               handleFieldChange(section.id, field.id, text, repeatIndex)
             }
             placeholder={field.placeholder}
+            style={error && styles.inputError}
           />
         );
 
       case 'textarea':
         return (
-          <TextInput
-            style={[styles.input, styles.textArea, error && styles.inputError]}
+          <VoiceToTextInput
             value={value}
-            onChangeText={(text) =>
+            onChange={(text) =>
               handleFieldChange(section.id, field.id, text, repeatIndex)
             }
             placeholder={field.placeholder}
             multiline
             numberOfLines={4}
-            textAlignVertical="top"
+            style={[error && styles.inputError, styles.textArea]}
           />
         );
 
