@@ -21,14 +21,134 @@ A comprehensive SaaS care provider management platform with multi-tenancy, role-
 
 ### Prerequisites
 - Node.js 18+ (currently using v20.14.0)
-- Docker and Docker Compose  
 - npm
+- PostgreSQL 15+ (either Docker OR local installation)
 
-### Step 1: Start Database
+---
+
+##  Database Setup Options
+
+You can choose **EITHER** Docker **OR** local PostgreSQL installation:
+
+### Option 1: Using Docker (Recommended - Easier)
+
+**Prerequisites**: Docker and Docker Compose installed
+
 ```bash
+# Start PostgreSQL in Docker
+docker-compose up -d postgres
+
+# Check if it's running
+docker-compose ps
+
+# View logs if needed
+docker-compose logs postgres
+```
+
+Database will be available at: `localhost:5432`
+- Username: `careuser`
+- Password: `carepass`
+- Database: `care_provider_db`
+
+**To stop the database:**
+```bash
+docker-compose down
+```
+
+**To reset the database:**
+```bash
+docker-compose down -v  # Removes volumes
 docker-compose up -d postgres
 ```
-Database runs on: `localhost:5432`
+
+---
+
+### Option 2: Direct PostgreSQL Installation (Local Machine)
+
+**Install PostgreSQL 15+:**
+
+**On Ubuntu/Debian:**
+```bash
+# Update package list
+sudo apt update
+
+# Install PostgreSQL
+sudo apt install postgresql postgresql-contrib
+
+# Start PostgreSQL service
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+**On macOS (using Homebrew):**
+```bash
+# Install PostgreSQL
+brew install postgresql@15
+
+# Start PostgreSQL service
+brew services start postgresql@15
+```
+
+**On Windows:**
+1. Download PostgreSQL from: https://www.postgresql.org/download/windows/
+2. Run the installer
+3. Follow installation wizard
+4. PostgreSQL service will start automatically
+
+**Create Database and User:**
+```bash
+# Switch to postgres user (Linux/macOS)
+sudo -u postgres psql
+
+# Or connect directly (Windows/macOS with Homebrew)
+psql postgres
+```
+
+**In the PostgreSQL shell, run:**
+```sql
+-- Create user
+CREATE USER careuser WITH PASSWORD 'carepass';
+
+-- Create database
+CREATE DATABASE care_provider_db;
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE care_provider_db TO careuser;
+
+-- Grant schema privileges (PostgreSQL 15+)
+\c care_provider_db
+GRANT ALL ON SCHEMA public TO careuser;
+
+-- Exit
+\q
+```
+
+**Update .env file** (backend/.env):
+```bash
+# For local PostgreSQL (default port 5432)
+DATABASE_URL="postgresql://careuser:carepass@localhost:5432/care_provider_db"
+
+# If using a different port
+DATABASE_URL="postgresql://careuser:carepass@localhost:5433/care_provider_db"
+```
+
+**Verify connection:**
+```bash
+# Test connection
+psql -h localhost -U careuser -d care_provider_db
+
+# Should prompt for password: carepass
+# If successful, you'll see: care_provider_db=>
+# Type \q to exit
+```
+
+---
+
+### Step 1: Start Database
+
+**Choose one:**
+- **Docker**: `docker-compose up -d postgres`
+- **Local**: Already running after installation above
 
 ### Step 2: Start Backend API
 ```bash
