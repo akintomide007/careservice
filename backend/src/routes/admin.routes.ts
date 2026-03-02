@@ -90,9 +90,15 @@ router.post('/users', requireAuth, requireAdminOrManager, async (req: any, res) 
   try {
     const { email, password, firstName, lastName, role } = req.body;
     
-    // Only admins can create managers, managers can only create DSPs
+    // Admins can create any role (admin, manager, dsp) - supports multiple admins per tenant
+    // Managers can only create DSPs
     if (req.user.role === 'manager' && role !== 'dsp') {
       return res.status(403).json({ error: 'Managers can only create DSP accounts' });
+    }
+    
+    // Additional validation: only admins can create other admins
+    if (role === 'admin' && req.user.role !== 'admin' && !req.user.isLandlord) {
+      return res.status(403).json({ error: 'Only admins can create other admin accounts' });
     }
     
     const hashedPassword = await bcrypt.hash(password, 10);

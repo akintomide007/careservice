@@ -150,3 +150,19 @@ export function requireAdminOrManager(req: AuthRequest, res: Response, next: Nex
   
   next();
 }
+
+// Prevent landlords from accessing client PHI/data
+// Landlords manage tenants/organizations, not client care data
+export function requireNonLandlord(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+  
+  if (req.user.isLandlord) {
+    res.status(403).json({ error: 'Landlords cannot access client data for privacy compliance' });
+    return;
+  }
+  
+  next();
+}

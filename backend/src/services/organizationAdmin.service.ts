@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { createDefaultFormTemplates } from '../utils/createDefaultFormTemplates';
 
 const prisma = new PrismaClient();
 
@@ -121,20 +122,23 @@ export class OrganizationAdminService {
   async createOrganization(data: {
     name: string;
     subdomain: string;
-    contactName: string;
-    contactEmail: string;
+    plan?: string;
+    maxUsers?: number;
+    maxClients?: number;
+    contactName?: string;
+    contactEmail?: string;
     contactPhone?: string;
     billingEmail?: string;
     subscriptionPlan?: string;
-    maxUsers?: number;
-    maxClients?: number;
     storageLimit?: number;
+    adminEmail?: string;
+    adminPassword?: string;
     branding?: {
       logoUrl?: string;
       primaryColor?: string;
       customDomain?: string;
     };
-    adminUser: {
+    adminUser?: {
       name: string;
       email: string;
       password: string;
@@ -149,15 +153,24 @@ export class OrganizationAdminService {
       throw new Error('Subdomain already taken');
     }
 
+    // Auto-generate admin user if not provided
+    // Check both adminEmail/adminPassword fields and adminUser object for flexibility
+    const adminEmail = data.adminEmail || data.adminUser?.email || `admin@${data.subdomain}.careservice.com`;
+    const adminPassword = data.adminPassword || data.adminUser?.password || `${data.subdomain}Admin123!`;
+    const adminName = data.adminUser?.name || `${data.name} Admin`;
+
     // Hash admin password
-    const hashedPassword = await bcrypt.hash(data.adminUser.password, 10);
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
     // Create organization with initial admin user
     const organization = await prisma.organization.create({
       data: {
         name: data.name,
         subdomain: data.subdomain,
-        billingEmail: data.billingEmail || data.contactEmail,
+        plan: data.plan || data.subscriptionPlan || 'basic',
+        maxUsers: data.maxUsers || 50,
+        maxClients: data.maxClients || 100,
+        billingEmail: data.billingEmail || data.contactEmail || adminEmail,
         billingStatus: 'active',
         subscriptionStart: new Date(),
         subscriptionEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
@@ -166,10 +179,10 @@ export class OrganizationAdminService {
         storageUsedMB: 0,
         users: {
           create: {
-            azureAdId: `local_${data.adminUser.email}_${Date.now()}`,
-            firstName: data.adminUser.name.split(' ')[0] || data.adminUser.name,
-            lastName: data.adminUser.name.split(' ').slice(1).join(' ') || '',
-            email: data.adminUser.email,
+            azureAdId: `local_${adminEmail}_${Date.now()}`,
+            firstName: adminName.split(' ')[0] || adminName,
+            lastName: adminName.split(' ').slice(1).join(' ') || '',
+            email: adminEmail,
             password: hashedPassword,
             role: 'admin',
             isActive: true,
@@ -185,7 +198,17 @@ export class OrganizationAdminService {
     // Record initial metrics
     await this.recordInitialMetrics(organization.id);
 
-    return organization;
+    // Create default form templates for new organization
+    await createDefaultFormTemplates(organization.id);
+
+    return {
+      ...organization,
+      initialCredentials: {
+        email: adminEmail,
+        password: adminPassword,
+        message: 'Please save these credentials and share them with the organization admin'
+      }
+    };
   }
 
   // Update organization settings

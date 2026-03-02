@@ -18,12 +18,27 @@ import adminRoutes from './routes/admin.routes';
 import supportRoutes from './routes/support.routes';
 import notificationRoutes from './routes/notification.routes';
 import ispGoalRoutes from './routes/ispGoal.routes';
+import ispOutcomeRoutes from './routes/ispOutcome.routes';
 import assignmentRoutes from './routes/assignment.routes';
+import transcriptionRoutes from './routes/transcription.routes';
+import organizationSettingsRoutes from './routes/organizationSettings.routes';
 
 const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: config.cors.origin }));
+// CORS must come before helmet
+app.use(cors({ 
+  origin: config.cors.origin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600 // Cache preflight for 10 minutes
+}));
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -45,8 +60,11 @@ app.use('/api/appointment-requests', appointmentRequestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/isp', ispGoalRoutes);
+app.use('/api/isp-goals', ispGoalRoutes);
+app.use('/api/isp-outcomes', ispOutcomeRoutes);
 app.use('/api', assignmentRoutes);
+app.use('/api', transcriptionRoutes);
+app.use('/api/organization', organizationSettingsRoutes);
 
 app.use(errorHandler);
 

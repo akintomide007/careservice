@@ -1,0 +1,156 @@
+name: CI/CD Pipeline - CareService
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: careservice_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            web-dashboard/package-lock.json
+      
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+      
+      - name: Install frontend dependencies
+        working-directory: ./web-dashboard
+        run: npm ci
+      
+      - name: Run Prisma migrations
+        working-directory: ./backend
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/careservice_test
+      
+      - name: Run backend linting
+        working-directory: ./backend
+        run: npm run lint --if-present
+      
+      - name: Run backend tests
+        working-directory: ./backend
+        run: npm test -- --coverage
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/careservice_test
+          JWT_SECRET: test-jwt-secret-key
+          NODE_ENV: test
+      
+      - name: Upload backend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: backend
+      
+      - name: Run frontend linting
+        working-directory: ./web-dashboard
+        run: npm run lint --if-present
+      
+      - name: Run frontend tests
+        working-directory: ./web-dashboard
+        run: npm test --if-present -- --coverage
+      
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./web-dashboard/coverage/lcov.info
+          flags: frontend
+      
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+      
+      - name: Build frontend
+        working-directory: ./web-dashboard
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+      
+      - name: Test Summary
+        run: |
+          echo "✅ All tests passed!"
+          echo "✅ Backend build successful"
+          echo "✅ Frontend build successful"
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Run npm audit (backend)
+        working-directory: ./backend
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Run npm audit (frontend)
+        working-directory: ./web-dashboard
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  deploy:
+    name: Deploy (if on main branch)
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deployment would happen here"
+          echo "This is a placeholder for actual deployment steps"
+          # Add your deployment commands here
+          # Examples:
+          # - Deploy to AWS/Azure/GCP
+          # - Update Docker containers
+          # - Run database migrations
+          # - Restart services

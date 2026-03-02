@@ -236,7 +236,8 @@ export const formTemplateController = {
   async getSubmittedResponses(req: Request, res: Response) {
     try {
       const { formType } = req.query;
-      const responses = await formTemplateService.getSubmittedResponses(formType as string);
+      const organizationId = (req as any).user?.organizationId;
+      const responses = await formTemplateService.getSubmittedResponses(formType as string, organizationId);
       res.json(responses);
     } catch (error) {
       console.error('Error fetching submitted responses:', error);

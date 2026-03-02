@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: careservice-postgres
+    environment:
+      POSTGRES_USER: careuser
+      POSTGRES_PASSWORD: carepass
+      POSTGRES_DB: care_provider_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careuser -d care_provider_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careservice-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: careservice-redis
+    ports:
+      - "6381:6379"  # Using port 6381 to avoid conflicts
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careservice-network
+
+networks:
+  careservice-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

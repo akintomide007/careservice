@@ -6,13 +6,12 @@ export const violationController = {
   // Create new violation
   async createViolation(req: AuthRequest, res: Response) {
     try {
-      const { organizationId, userId, role } = req.user!;
+      const { organizationId, userId } = req.user!;
       
-      // Only managers and admins can report violations
-      if (role !== 'manager' && role !== 'admin') {
-        return res.status(403).json({ error: 'Not authorized to report violations' });
-      }
-
+      // All authenticated users can report violations (DSP, Manager, Admin)
+      // DSPs can self-report or witness violations
+      // Managers/Admins can report violations on staff
+      
       const violation = await violationService.createViolation({
         organizationId,
         reportedBy: userId,

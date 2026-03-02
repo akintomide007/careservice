@@ -11,11 +11,25 @@ export const scheduleController = {
         return res.status(403).json({ error: 'Not authorized' });
       }
 
-      const schedule = await scheduleService.createSchedule({
+      // Convert date strings to Date objects
+      const scheduleData: any = {
         organizationId,
         createdBy: userId,
         ...req.body
-      });
+      };
+
+      // Ensure startTime and endTime are proper Date objects
+      if (scheduleData.startTime) {
+        scheduleData.startTime = new Date(scheduleData.startTime);
+      }
+      if (scheduleData.endTime) {
+        scheduleData.endTime = new Date(scheduleData.endTime);
+      }
+      if (scheduleData.recurrenceEnd) {
+        scheduleData.recurrenceEnd = new Date(scheduleData.recurrenceEnd);
+      }
+
+      const schedule = await scheduleService.createSchedule(scheduleData);
 
       return res.status(201).json(schedule);
     } catch (error: any) {
@@ -80,7 +94,16 @@ export const scheduleController = {
         return res.status(403).json({ error: 'Not authorized' });
       }
 
-      const schedule = await scheduleService.updateSchedule(req.params.id, req.body);
+      // Convert date strings to Date objects if present
+      const updateData: any = { ...req.body };
+      if (updateData.startTime) {
+        updateData.startTime = new Date(updateData.startTime);
+      }
+      if (updateData.endTime) {
+        updateData.endTime = new Date(updateData.endTime);
+      }
+
+      const schedule = await scheduleService.updateSchedule(req.params.id, updateData);
       return res.json(schedule);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

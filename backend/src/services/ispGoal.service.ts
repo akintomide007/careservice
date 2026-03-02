@@ -106,17 +106,22 @@ export const ispGoalService = {
     description?: string;
     goalType: string;
     measurementCriteria?: any;
-    targetDate?: Date;
+    targetDate?: string | Date;
     frequency?: string;
     priority?: string;
     milestones?: Array<{
       title: string;
       description?: string;
-      targetDate: Date;
+      targetDate: string | Date;
       completionCriteria: string;
       orderIndex?: number;
     }>;
   }) {
+    // Convert date strings to Date objects, handle empty strings
+    const targetDate = data.targetDate && data.targetDate !== '' 
+      ? new Date(data.targetDate) 
+      : null;
+
     return prisma.ispGoal.create({
       data: {
         outcomeId: data.outcomeId,
@@ -124,15 +129,15 @@ export const ispGoalService = {
         description: data.description,
         goalType: data.goalType,
         measurementCriteria: data.measurementCriteria,
-        targetDate: data.targetDate,
+        targetDate: targetDate,
         frequency: data.frequency,
         priority: data.priority || 'medium',
         status: 'active',
-        milestones: data.milestones ? {
+        milestones: data.milestones && data.milestones.length > 0 ? {
           create: data.milestones.map((milestone, index) => ({
             title: milestone.title,
             description: milestone.description,
-            targetDate: milestone.targetDate,
+            targetDate: new Date(milestone.targetDate),
             completionCriteria: milestone.completionCriteria,
             orderIndex: milestone.orderIndex || index + 1,
             status: 'pending'
@@ -152,15 +157,23 @@ export const ispGoalService = {
     description?: string;
     goalType?: string;
     measurementCriteria?: any;
-    targetDate?: Date;
+    targetDate?: string | Date;
     frequency?: string;
     priority?: string;
     status?: string;
     progressPercentage?: number;
   }) {
+    // Convert date strings to Date objects, handle empty strings
+    const updateData: any = { ...data };
+    if (data.targetDate !== undefined) {
+      updateData.targetDate = data.targetDate && data.targetDate !== '' 
+        ? new Date(data.targetDate) 
+        : null;
+    }
+
     return prisma.ispGoal.update({
       where: { id },
-      data,
+      data: updateData,
       include: {
         milestones: true,
         _count: {

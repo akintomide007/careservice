@@ -38,8 +38,57 @@ model Organization {
   supportTickets    SupportTicket[]
   usageMetrics      UsageMetric[]
   notifications     Notification[]
+  organizationSettings OrganizationSettings?
 
   @@map("organizations")
+}
+
+// Extended Organization Settings for Multi-Tenant Customization
+model OrganizationSettings {
+  id                String        @id @default(uuid())
+  organizationId    String        @unique @map("organization_id")
+  
+  // Branding & Visual Identity
+  logoUrl           String?       @map("logo_url")
+  printLogoUrl      String?       @map("print_logo_url")
+  faviconUrl        String?       @map("favicon_url")
+  primaryColor      String        @default("#3B82F6") @map("primary_color")
+  secondaryColor    String        @default("#10B981") @map("secondary_color")
+  accentColor       String        @default("#8B5CF6") @map("accent_color")
+  fontFamily        String        @default("Inter") @map("font_family")
+  
+  // Company Information
+  companyName       String        @map("company_name")
+  tagline           String?
+  addressLine1      String?       @map("address_line1")
+  addressLine2      String?       @map("address_line2")
+  city              String?
+  state             String?
+  zipCode           String?       @map("zip_code")
+  phone             String?
+  email             String?
+  website           String?
+  
+  // Feature Toggles
+  enabledModules    Json          @default("[]") @map("enabled_modules") // Array of enabled module names
+  
+  // Customization
+  dashboardLayout   Json?         @map("dashboard_layout") // Custom dashboard widget configuration
+  formTemplates     Json?         @map("form_templates") // Custom form field configurations
+  emailTemplates    Json?         @map("email_templates") // Email notification templates
+  printStyles       Json?         @map("print_styles") // Print formatting preferences
+  
+  // Legal & Compliance
+  termsOfService    String?       @map("terms_of_service")
+  privacyPolicy     String?       @map("privacy_policy")
+  consentForms      Json?         @map("consent_forms")
+  
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  
+  organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@map("organization_settings")
 }
 
 model User {
@@ -78,6 +127,9 @@ model User {
   schedulesCreated      Schedule[]          @relation("ScheduleCreator")
   appointmentRequests   AppointmentRequest[] @relation("AppointmentRequester")
   appointmentReviews    AppointmentRequest[] @relation("AppointmentReviewer")
+  appointmentsAssigned  AppointmentRequest[] @relation("AppointmentDSP")
+  dspAvailability       DspAvailability[]    @relation("DspAvailability")
+  dspTimeOff            DspTimeOff[]         @relation("DspTimeOff")
   ticketsReported       SupportTicket[]     @relation("TicketReporter")
   ticketsAssigned       SupportTicket[]     @relation("TicketAssignee")
   ticketComments        TicketComment[]
@@ -98,6 +150,10 @@ model Client {
   dateOfBirth             DateTime?           @map("date_of_birth") @db.Date
   dddId                   String?             @map("ddd_id")
   address                 String?
+  latitude                Float?              // GPS latitude for location verification
+  longitude               Float?              // GPS longitude for location verification
+  locationAddress         String?             @map("location_address") // Formatted address
+  locationRadiusMeters    Int?                @default(100) @map("location_radius_meters") // Acceptable radius for clock in
   emergencyContactName    String?             @map("emergency_contact_name")
   emergencyContactPhone   String?             @map("emergency_contact_phone")
   photoUrl                String?             @map("photo_url")
@@ -269,6 +325,9 @@ model ServiceSession {
   clockOutLng         Float?          @map("clock_out_lng")
   totalHours          Float?          @map("total_hours")
   locationName        String?         @map("location_name")
+  locationVerified    Boolean?        @default(false) @map("location_verified") // Was location within range?
+  distanceFromClient  Int?            @map("distance_from_client") // Distance in meters
+  verificationMessage String?         @map("verification_message") // Verification status message
   status              String          @default("in_progress")
   createdAt           DateTime        @default(now()) @map("created_at")
   updatedAt           DateTime        @updatedAt @map("updated_at")
@@ -710,20 +769,98 @@ model AppointmentRequest {
   reviewNotes       String?         @map("review_notes")
   scheduledDate     DateTime?       @map("scheduled_date")
   scheduleId        String?         @unique @map("schedule_id")
+  
+  // NEW: Enhanced appointment fields
+  assignedDspId           String?   @map("assigned_dsp_id")
+  estimatedDuration       Int       @default(60) @map("estimated_duration") // minutes
+  actualDuration          Int?      @map("actual_duration")
+  checkInTime             DateTime? @map("check_in_time")
+  checkOutTime            DateTime? @map("check_out_time")
+  transportationRequired  Boolean   @default(false) @map("transportation_required")
+  transportationAssignedTo String?  @map("transportation_assigned_to")
+  reminderSent            Boolean   @default(false) @map("reminder_sent")
+  reminderSentAt          DateTime? @map("reminder_sent_at")
+  followUpRequired        Boolean   @default(false) @map("follow_up_required")
+  followUpNotes           String?   @map("follow_up_notes")
+  recurringGroupId        String?   @map("recurring_group_id")
+  isRecurring             Boolean   @default(false) @map("is_recurring")
+  recurringRule           Json?     @map("recurring_rule")
+  reminderSettings        Json?     @map("reminder_settings")
+  
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
   
   client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   requester         User            @relation("AppointmentRequester", fields: [requestedBy], references: [id])
   reviewer          User?           @relation("AppointmentReviewer", fields: [reviewedBy], references: [id])
+  assignedDsp       User?           @relation("AppointmentDSP", fields: [assignedDspId], references: [id])
   schedule          Schedule?       @relation("ScheduleAppointment", fields: [scheduleId], references: [id])
+  reminders         AppointmentReminder[]
   
   @@index([organizationId])
   @@index([clientId])
   @@index([requestedBy])
   @@index([status])
   @@index([urgency])
+  @@index([assignedDspId, scheduledDate])
+  @@index([recurringGroupId])
   @@map("appointment_requests")
+}
+
+// DSP Availability Management
+model DspAvailability {
+  id            String    @id @default(uuid())
+  dspId         String    @map("dsp_id")
+  dayOfWeek     Int       @map("day_of_week") // 0 = Sunday, 6 = Saturday
+  startTime     String    @map("start_time")  // "09:00"
+  endTime       String    @map("end_time")    // "17:00"
+  isAvailable   Boolean   @default(true) @map("is_available")
+  effectiveFrom DateTime? @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  dsp           User      @relation("DspAvailability", fields: [dspId], references: [id], onDelete: Cascade)
+  
+  @@index([dspId])
+  @@index([dayOfWeek])
+  @@map("dsp_availability")
+}
+
+// DSP Time Off Requests
+model DspTimeOff {
+  id          String    @id @default(uuid())
+  dspId       String    @map("dsp_id")
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime  @map("end_date")
+  reason      String?
+  approved    Boolean   @default(false)
+  approvedBy  String?   @map("approved_by")
+  approvedAt  DateTime? @map("approved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  dsp         User      @relation("DspTimeOff", fields: [dspId], references: [id], onDelete: Cascade)
+  
+  @@index([dspId])
+  @@index([startDate, endDate])
+  @@map("dsp_time_off")
+}
+
+// Appointment Reminders
+model AppointmentReminder {
+  id            String    @id @default(uuid())
+  appointmentId String    @map("appointment_id")
+  reminderType  String    @map("reminder_type") // 'client', 'dsp', 'manager'
+  scheduledFor  DateTime  @map("scheduled_for")
+  sent          Boolean   @default(false)
+  sentAt        DateTime? @map("sent_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  appointment   AppointmentRequest @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  
+  @@index([appointmentId])
+  @@index([scheduledFor, sent])
+  @@map("appointment_reminders")
 }
 
 // Support Ticket System

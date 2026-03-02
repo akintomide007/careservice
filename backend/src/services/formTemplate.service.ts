@@ -161,7 +161,15 @@ export const formTemplateService = {
 
   // Update form response
   async updateResponse(id: string, data: any) {
-    return prisma.formResponse.update({
+    const response = await prisma.formResponse.findUnique({
+      where: { id },
+      include: {
+        template: true,
+        user: true
+      }
+    });
+
+    const updated = await prisma.formResponse.update({
       where: { id },
       data: {
         responseData: data.responseData,
@@ -169,6 +177,40 @@ export const formTemplateService = {
         submittedAt: data.status === 'submitted' ? new Date() : undefined
       }
     });
+
+    // If status changed to 'submitted', create notification for managers
+    if (data.status === 'submitted' && response?.user) {
+      // Get all managers in the organization
+      const managers = await prisma.user.findMany({
+        where: {
+          organizationId: response.user.organizationId,
+          role: { in: ['manager', 'admin'] },
+          isActive: true
+        }
+      });
+
+      // Create notification for each manager
+      for (const manager of managers) {
+        await prisma.notification.create({
+          data: {
+            userId: manager.id,
+            organizationId: manager.organizationId,
+            type: 'form_submitted',
+            title: 'New Form Submitted for Review',
+            message: `${response.user.firstName} ${response.user.lastName} has submitted a ${response.template.name} form for your review.`,
+            isRead: false,
+            metadata: {
+              formResponseId: id,
+              formTemplateName: response.template.name,
+              submittedBy: `${response.user.firstName} ${response.user.lastName}`,
+              submittedById: response.user.id
+            }
+          }
+        });
+      }
+    }
+
+    return updated;
   },
 
   // Get user's form responses
@@ -299,11 +341,16 @@ export const formTemplateService = {
     });
   },
 
-  // Get all submitted form responses (for manager approval)
-  async getSubmittedResponses(formType?: string) {
+  // Get all submitted and approved form responses (for manager/admin viewing)
+  async getSubmittedResponses(formType?: string, organizationId?: string) {
     return prisma.formResponse.findMany({
       where: {
-        status: 'submitted',
+        status: { in: ['submitted', 'approved', 'rejected'] },
+        ...(organizationId && {
+          user: {
+            organizationId
+          }
+        }),
         ...(formType && {
           template: {
             formType
@@ -317,7 +364,8 @@ export const formTemplateService = {
             id: true,
             firstName: true,
             lastName: true,
-            email: true
+            email: true,
+            organizationId: true
           }
         }
       },
@@ -329,12 +377,20 @@ export const formTemplateService = {
   async approveFormResponse(responseId: string, approverId: string, action: 'approve' | 'reject', comment?: string) {
     const response = await prisma.formResponse.findUnique({
       where: { id: responseId },
-      include: { template: true }
+      include: { 
+        template: true,
+        user: true
+      }
     });
 
     if (!response) {
       throw new Error('Form response not found');
     }
+
+    // Get approver details
+    const approver = await prisma.user.findUnique({
+      where: { id: approverId }
+    });
 
     // Parse existing response data and add approval metadata
     const existingData = response.responseData as Record<string, any> || {};
@@ -360,6 +416,31 @@ export const formTemplateService = {
         user: true
       }
     });
+
+    // Send notification to the DSP who submitted the form
+    if (response.user) {
+      const actionText = action === 'approve' ? 'approved' : 'rejected';
+      const approverName = approver ? `${approver.firstName} ${approver.lastName}` : 'A manager';
+      
+      await prisma.notification.create({
+        data: {
+          userId: response.userId,
+          organizationId: response.user.organizationId,
+          type: `form_${actionText}`,
+          title: `Form ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+          message: `${approverName} has ${actionText} your ${response.template.name} form.${comment ? ` Comment: ${comment}` : ''}`,
+          isRead: false,
+          metadata: {
+            formResponseId: responseId,
+            formTemplateName: response.template.name,
+            action,
+            approverId,
+            approverName,
+            comment: comment || null
+          }
+        }
+      });
+    }
 
     return updatedResponse;
   },

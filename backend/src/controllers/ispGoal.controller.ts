@@ -99,8 +99,11 @@ export const ispGoalController = {
   async addActivity(req: AuthRequest, res: Response) {
     try {
       const { goalId } = req.params;
+      const { activityDate, ...rest } = req.body;
+      
       const activityData = {
-        ...req.body,
+        ...rest,
+        activityDate: activityDate ? new Date(activityDate) : new Date(),
         goalId,
         staffId: req.user!.userId
       };
@@ -129,6 +132,49 @@ export const ispGoalController = {
       return res.json(milestone);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
+    }
+  },
+  
+  async getGoalActivities(req: AuthRequest, res: Response) {
+    try {
+      const { goalId } = req.params;
+      const { limit } = req.query;
+      
+      const activities = await prisma.ispActivity.findMany({
+        where: { goalId },
+        include: {
+          staff: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          goal: {
+            select: {
+              id: true,
+              title: true,
+              outcome: {
+                select: {
+                  client: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { activityDate: 'desc' },
+        take: limit ? parseInt(limit as string) : undefined
+      });
+      
+      return res.json(activities);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
   }
 };

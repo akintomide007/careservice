@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { ClockInData, ClockOutData } from '../types';
+import { verifyLocation } from '../utils/geolocation';
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,43 @@ export async function clockIn(staffId: string, data: ClockInData) {
     throw new Error('You already have an active session. Please clock out first.');
   }
   
+  // Get client location for verification
+  const client = await prisma.client.findUnique({
+    where: { id: data.clientId }
+  });
+  
+  if (!client) {
+    throw new Error('Client not found');
+  }
+  
+  // Verify DSP location if client has location set
+  let locationVerified = false;
+  let distanceFromClient: number | null = null;
+  let verificationMessage = '';
+  
+  if (client.latitude && client.longitude && data.latitude && data.longitude) {
+    const maxDistance = client.locationRadiusMeters || 100;
+    const verification = verifyLocation(
+      data.latitude,
+      data.longitude,
+      client.latitude,
+      client.longitude,
+      maxDistance
+    );
+    
+    locationVerified = verification.verified;
+    distanceFromClient = verification.distance;
+    verificationMessage = verification.message;
+    
+    if (!locationVerified) {
+      throw new Error(verificationMessage);
+    }
+  } else {
+    // No client location set - allow clock in but mark as unverified
+    verificationMessage = 'Location verification skipped - client location not configured';
+    locationVerified = true; // Allow clock in
+  }
+  
   return prisma.serviceSession.create({
     data: {
       staffId,
@@ -24,6 +62,9 @@ export async function clockIn(staffId: string, data: ClockInData) {
       clockInLat: data.latitude,
       clockInLng: data.longitude,
       locationName: data.locationName,
+      locationVerified,
+      distanceFromClient,
+      verificationMessage,
       status: 'in_progress'
     },
     include: {

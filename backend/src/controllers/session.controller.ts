@@ -30,11 +30,17 @@ export async function clockOut(req: AuthRequest, res: Response) {
     
     const data: ClockOutData = req.body;
     
-    if (!data.sessionId) {
-      return res.status(400).json({ error: 'Session ID is required' });
+    // If no sessionId provided, find the active session
+    let sessionId = data.sessionId;
+    if (!sessionId) {
+      const activeSessions = await sessionService.getActiveSessions(req.user.id);
+      if (!activeSessions || activeSessions.length === 0) {
+        return res.status(400).json({ error: 'No active session found' });
+      }
+      sessionId = activeSessions[0].id;
     }
     
-    const session = await sessionService.clockOut(req.user.id, data);
+    const session = await sessionService.clockOut(req.user.id, { sessionId });
     
     return res.json(session);
   } catch (error: any) {

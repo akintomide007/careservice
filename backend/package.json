@@ -10,11 +10,16 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx prisma/seed-minimal.ts",
+    "db:reset": "../scripts/reset-database.sh",
     "db:studio": "prisma studio",
     "test": "jest",
     "lint": "eslint src --ext .ts",
-    "seed:comprehensive": "ts-node prisma/seed-comprehensive.ts"
+    "seed:landlord": "tsx prisma/seed-minimal.ts",
+    "seed:comprehensive": "tsx prisma/seed-comprehensive.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed-minimal.ts"
   },
   "keywords": [
     "care-provider",
@@ -23,11 +28,9 @@
   ],
   "author": "",
   "license": "MIT",
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "axios": "^1.13.5",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
