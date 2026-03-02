@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import VoiceToTextInput from '../components/VoiceToTextInput';
 
 interface ProgressNoteFormProps {
   activeSession: any;
@@ -36,32 +37,29 @@ export default function ProgressNoteForm({ activeSession, onSubmit, onBack }: Pr
           <Text style={styles.pickerText}>{noteForm.serviceType}</Text>
         </View>
         
-        <Text style={styles.label}>Reason for Service</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Why was service provided today?"
+        <Text style={styles.label}>Reason for Service 🎙️</Text>
+        <VoiceToTextInput
           value={noteForm.reasonForService}
-          onChangeText={(text) => setNoteForm({...noteForm, reasonForService: text})}
+          onChange={(text) => setNoteForm({...noteForm, reasonForService: text})}
+          placeholder="Type or speak why service was provided today..."
           multiline
           numberOfLines={3}
         />
         
-        <Text style={styles.label}>Supports Provided</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="What supports were provided?"
+        <Text style={styles.label}>Supports Provided 🎙️</Text>
+        <VoiceToTextInput
           value={noteForm.supportsProvided}
-          onChangeText={(text) => setNoteForm({...noteForm, supportsProvided: text})}
+          onChange={(text) => setNoteForm({...noteForm, supportsProvided: text})}
+          placeholder="Type or speak what supports were provided..."
           multiline
           numberOfLines={3}
         />
         
-        <Text style={styles.label}>Progress Notes</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Document progress and observations..."
+        <Text style={styles.label}>Progress Notes 🎙️</Text>
+        <VoiceToTextInput
           value={noteForm.progressNotes}
-          onChangeText={(text) => setNoteForm({...noteForm, progressNotes: text})}
+          onChange={(text) => setNoteForm({...noteForm, progressNotes: text})}
+          placeholder="Type or speak to document progress and observations..."
           multiline
           numberOfLines={4}
         />

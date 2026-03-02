@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import VoiceToTextInput from '../components/VoiceToTextInput';
 
 interface IncidentReportFormProps {
   activeSession: any;
@@ -57,22 +58,20 @@ export default function IncidentReportForm({ activeSession, onSubmit, onBack }: 
           ))}
         </View>
         
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Describe what happened..."
+        <Text style={styles.label}>Description 🎙️</Text>
+        <VoiceToTextInput
           value={incidentForm.description}
-          onChangeText={(text) => setIncidentForm({...incidentForm, description: text})}
+          onChange={(text) => setIncidentForm({...incidentForm, description: text})}
+          placeholder="Type or speak to describe what happened..."
           multiline
           numberOfLines={4}
         />
         
-        <Text style={styles.label}>Action Taken</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="What action was taken?"
+        <Text style={styles.label}>Action Taken 🎙️</Text>
+        <VoiceToTextInput
           value={incidentForm.actionTaken}
-          onChangeText={(text) => setIncidentForm({...incidentForm, actionTaken: text})}
+          onChange={(text) => setIncidentForm({...incidentForm, actionTaken: text})}
+          placeholder="Type or speak what action was taken..."
           multiline
           numberOfLines={3}
         />
