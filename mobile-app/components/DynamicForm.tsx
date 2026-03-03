@@ -3,6 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -186,18 +187,20 @@ export default function DynamicForm({
     switch (field.fieldType) {
       case 'text':
       case 'date':
+        // Regular input for names, dates, signatures - NO voice input
         return (
-          <VoiceToTextInput
+          <TextInput
             value={value}
-            onChange={(text) =>
+            onChangeText={(text) =>
               handleFieldChange(section.id, field.id, text, repeatIndex)
             }
             placeholder={field.placeholder}
-            style={error && styles.inputError}
+            style={[styles.input, error && styles.inputError]}
           />
         );
 
       case 'textarea':
+        // Voice input for descriptive fields like objectives, notes, descriptions
         return (
           <VoiceToTextInput
             value={value}

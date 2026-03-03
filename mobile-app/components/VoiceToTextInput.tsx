@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Conditionally import Voice only for native platforms
 let Voice: any = null;
@@ -172,12 +173,18 @@ export default function VoiceToTextInput({
             isListening && styles.micButtonActive
           ]}
         >
-          <Text style={styles.micIcon}>{isListening ? '🎤' : '🎙️'}</Text>
+          <Ionicons 
+            name={isListening ? "mic-off" : "mic"} 
+            size={20} 
+            color="#fff" 
+          />
         </TouchableOpacity>
       </View>
       
       {isListening && (
-        <Text style={styles.listeningText}>🎤 Listening... Speak now</Text>
+        <Text style={styles.listeningText}>
+          <Ionicons name="mic" size={12} color="#2563eb" /> Listening... Speak now
+        </Text>
       )}
       
       {error && (
