@@ -1,6 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
-import Voice from '@react-native-voice/voice';
+
+// Conditionally import Voice only for native platforms
+let Voice: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    Voice = require('@react-native-voice/voice').default;
+  } catch (e) {
+    console.log('Voice module not available');
+  }
+}
 
 interface VoiceToTextInputProps {
   value: string;
@@ -21,17 +30,61 @@ export default function VoiceToTextInput({
 }: VoiceToTextInputProps) {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
-    // Set up voice recognition events
-    Voice.onSpeechStart = onSpeechStart;
-    Voice.onSpeechEnd = onSpeechEnd;
-    Voice.onSpeechResults = onSpeechResults;
-    Voice.onSpeechError = onSpeechError;
+    if (isWeb) {
+      // Setup Web Speech Recognition
+      if (typeof window !== 'undefined') {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
+          recognitionRef.current.lang = 'en-US';
+
+          recognitionRef.current.onresult = (event: any) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' ';
+              }
+            }
+            if (finalTranscript) {
+              const newValue = value + (value ? ' ' : '') + finalTranscript;
+              onChange(newValue);
+            }
+          };
+
+          recognitionRef.current.onerror = () => {
+            setError('Voice input error. Please try again.');
+            setIsListening(false);
+          };
+
+          recognitionRef.current.onend = () => {
+            setIsListening(false);
+          };
+        }
+      }
+    } else if (Voice) {
+      // Setup native voice recognition
+      Voice.onSpeechStart = onSpeechStart;
+      Voice.onSpeechEnd = onSpeechEnd;
+      Voice.onSpeechResults = onSpeechResults;
+      Voice.onSpeechError = onSpeechError;
+    }
 
     return () => {
-      // Cleanup
-      Voice.destroy().then(Voice.removeAllListeners);
+      if (isWeb && recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore
+        }
+      } else if (Voice) {
+        Voice.destroy().then(Voice.removeAllListeners);
+      }
     };
   }, []);
 
@@ -61,19 +114,31 @@ export default function VoiceToTextInput({
   const startListening = async () => {
     try {
       setError(null);
-      await Voice.start('en-US');
+      setIsListening(true);
+      
+      if (isWeb && recognitionRef.current) {
+        recognitionRef.current.start();
+      } else if (Voice) {
+        await Voice.start('en-US');
+      }
     } catch (error) {
       console.error('Error starting voice recognition:', error);
       setError('Could not start voice input');
+      setIsListening(false);
     }
   };
 
   const stopListening = async () => {
     try {
-      await Voice.stop();
+      if (isWeb && recognitionRef.current) {
+        recognitionRef.current.stop();
+      } else if (Voice) {
+        await Voice.stop();
+      }
       setIsListening(false);
     } catch (error) {
       console.error('Error stopping voice recognition:', error);
+      setIsListening(false);
     }
   };
 
