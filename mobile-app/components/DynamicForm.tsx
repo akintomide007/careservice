@@ -54,7 +54,24 @@ export default function DynamicForm({
   onSave,
   onCancel,
 }: DynamicFormProps) {
-  const [formData, setFormData] = useState<any>(initialData || {});
+  const [formData, setFormData] = useState<any>(() => {
+    // Auto-populate date fields with current date
+    const data = initialData || {};
+    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    
+    template.sections.forEach(section => {
+      section.fields.forEach(field => {
+        if (field.fieldType === 'date') {
+          const key = `${section.id}_${field.id}`;
+          if (!data[key]) {
+            data[key] = today;
+          }
+        }
+      });
+    });
+    
+    return data;
+  });
   const [repeatCounts, setRepeatCounts] = useState<{ [key: string]: number }>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [saving, setSaving] = useState(false);
