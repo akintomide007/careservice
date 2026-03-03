@@ -203,8 +203,7 @@ export default function DynamicForm({
 
     switch (field.fieldType) {
       case 'text':
-      case 'date':
-        // Regular input for names, dates, signatures - NO voice input
+        // Regular input for names, signatures - NO voice input
         return (
           <TextInput
             value={value}
@@ -212,6 +211,21 @@ export default function DynamicForm({
               handleFieldChange(section.id, field.id, text, repeatIndex)
             }
             placeholder={field.placeholder}
+            style={[styles.input, error && styles.inputError]}
+          />
+        );
+
+      case 'date':
+        // Date picker input
+        return (
+          <TextInput
+            value={value}
+            onChangeText={(text) =>
+              handleFieldChange(section.id, field.id, text, repeatIndex)
+            }
+            placeholder="YYYY-MM-DD"
+            // @ts-ignore - type prop works on web
+            type="date"
             style={[styles.input, error && styles.inputError]}
           />
         );
