@@ -6,7 +6,7 @@ I've successfully implemented a **hybrid AI-powered speech-to-text system** with
 
 ---
 
-## 🚀 Key Features Implemented
+##  Key Features Implemented
 
 ### 1. **Hybrid Architecture**
 - ✅ **Primary:** Browser's Web Speech API (FREE, works offline)
@@ -419,7 +419,7 @@ interface SpeechToTextInputProps {
 
 ---
 
-## 🚀 Start Using It Now!
+##  Start Using It Now!
 
 ```bash
 # Terminal 1: Start backend

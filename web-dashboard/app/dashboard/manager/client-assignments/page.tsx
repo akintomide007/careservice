@@ -133,9 +133,14 @@ export default function ManagerClientAssignmentsPage() {
     e.preventDefault();
     try {
       await api.createTask({
-        ...taskForm,
+        taskType: taskForm.taskType,
+        title: taskForm.title,
+        description: taskForm.description,
+        priority: taskForm.priority,
+        dueDate: new Date(taskForm.dueDate),
+        estimatedHours: parseFloat(taskForm.estimatedHours),
         assignedTo: taskForm.dspId,
-        estimatedHours: parseFloat(taskForm.estimatedHours)
+        clientId: taskForm.clientId || undefined
       });
       
       setShowTaskModal(false);

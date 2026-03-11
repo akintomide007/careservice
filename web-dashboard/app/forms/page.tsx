@@ -29,6 +29,8 @@ function FormsPageContent() {
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
+  const [clients, setClients] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -44,6 +46,8 @@ function FormsPageContent() {
       loadTemplates();
       loadDrafts();
       loadRejectedFormsData();
+      loadClients();
+      loadActiveSession();
       
       // Check if we need to load a draft
       if (draftId) {
@@ -51,6 +55,26 @@ function FormsPageContent() {
       }
     }
   }, [user, draftId]);
+
+  const loadClients = async () => {
+    try {
+      const data = await api.getClients();
+      setClients(data);
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+    }
+  };
+
+  const loadActiveSession = async () => {
+    try {
+      const session = await api.getActiveSession();
+      if (session) {
+        setActiveSession(session);
+      }
+    } catch (error) {
+      console.error('Failed to load active session:', error);
+    }
+  };
 
   const loadRejectedFormsData = async () => {
     setLoadingRejected(true);
@@ -207,6 +231,8 @@ function FormsPageContent() {
               // Clear draft parameter from URL
               router.replace('/forms');
             }}
+            clients={clients}
+            activeClient={activeSession?.client}
           />
         </div>
       </div>

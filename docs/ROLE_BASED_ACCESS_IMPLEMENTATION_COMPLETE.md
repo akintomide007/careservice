@@ -253,7 +253,7 @@ NODE_ENV=test
 
 ---
 
-## 🚀 CI/CD Pipeline
+##  CI/CD Pipeline
 
 ### **GitHub Actions Workflow:**
 Location: `.github/workflows/ci.yml`

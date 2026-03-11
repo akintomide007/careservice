@@ -46,6 +46,8 @@ interface DynamicFormProps {
   initialData?: any;
   onSave: (data: any, status: 'draft' | 'submitted') => Promise<void>;
   onCancel: () => void;
+  clients?: any[];
+  activeClient?: any;
 }
 
 export default function DynamicForm({
@@ -53,6 +55,8 @@ export default function DynamicForm({
   initialData,
   onSave,
   onCancel,
+  clients = [],
+  activeClient,
 }: DynamicFormProps) {
   const [formData, setFormData] = useState<any>(() => {
     // Auto-populate date fields with current date
@@ -75,6 +79,7 @@ export default function DynamicForm({
   const [repeatCounts, setRepeatCounts] = useState<{ [key: string]: number }>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [saving, setSaving] = useState(false);
+  const [expandedDropdowns, setExpandedDropdowns] = useState<{ [key: string]: boolean }>({});
 
   const handleFieldChange = (
     sectionId: string,
@@ -203,6 +208,62 @@ export default function DynamicForm({
 
     switch (field.fieldType) {
       case 'text':
+        // Check if this is a client/consumer name field
+        const isClientField = field.label && (
+          field.label.toLowerCase().includes('consumer name') ||
+          field.label.toLowerCase().includes('client name') ||
+          field.label.toLowerCase().includes('participant name') ||
+          field.label === 'Consumer Name' ||
+          field.label === 'Client Name'
+        );
+
+        // If it's a client field and we have clients, show collapsible dropdown
+        if (isClientField && clients.length > 0) {
+          // Auto-populate with active client if present and field is empty
+          const autoValue = value || (activeClient ? `${activeClient.firstName} ${activeClient.lastName}` : '');
+          const isExpanded = expandedDropdowns[key] || false;
+          
+          return (
+            <View>
+              <TouchableOpacity
+                style={[styles.selectContainer, error && styles.inputError]}
+                onPress={() => setExpandedDropdowns(prev => ({ ...prev, [key]: !prev[key] }))}
+              >
+                <Text style={autoValue ? styles.selectText : styles.selectPlaceholder}>
+                  {autoValue || '-- Select Client --'}
+                </Text>
+                <Text style={styles.selectArrow}>{isExpanded ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+              {isExpanded && (
+                <View style={styles.optionsContainer}>
+                  {clients.map((client: any) => (
+                    <TouchableOpacity
+                      key={client.id}
+                      style={[
+                        styles.optionButton,
+                        autoValue === `${client.firstName} ${client.lastName}` && styles.optionButtonActive,
+                      ]}
+                      onPress={() => {
+                        handleFieldChange(section.id, field.id, `${client.firstName} ${client.lastName}`, repeatIndex);
+                        setExpandedDropdowns(prev => ({ ...prev, [key]: false }));
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          autoValue === `${client.firstName} ${client.lastName}` && styles.optionTextActive,
+                        ]}
+                      >
+                        {client.firstName} {client.lastName} {client.dddId ? `(ID: ${client.dddId})` : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        }
+
         // Regular input for names, signatures - NO voice input
         return (
           <TextInput
@@ -537,6 +598,9 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   selectContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d1d5db',
     padding: 12,
@@ -546,10 +610,17 @@ const styles = StyleSheet.create({
   selectText: {
     fontSize: 16,
     color: '#111',
+    flex: 1,
   },
   selectPlaceholder: {
     fontSize: 16,
     color: '#9ca3af',
+    flex: 1,
+  },
+  selectArrow: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 8,
   },
   optionsContainer: {
     marginTop: 8,

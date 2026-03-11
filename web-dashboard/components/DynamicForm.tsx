@@ -40,9 +40,11 @@ interface DynamicFormProps {
   initialData?: any;
   onSave: (data: any, status: 'draft' | 'submitted') => Promise<void>;
   onCancel?: () => void;
+  clients?: any[];
+  activeClient?: any;
 }
 
-export default function DynamicForm({ template, initialData, onSave, onCancel }: DynamicFormProps) {
+export default function DynamicForm({ template, initialData, onSave, onCancel, clients = [], activeClient }: DynamicFormProps) {
   const [formData, setFormData] = useState<any>(initialData || {});
   
   // Initialize repeat counts
@@ -194,6 +196,36 @@ export default function DynamicForm({ template, initialData, onSave, onCancel }:
 
     switch (field.fieldType) {
       case 'text':
+        // Check if this is a client/consumer name field
+        const isClientField = field.label && (
+          field.label.toLowerCase().includes('consumer name') ||
+          field.label.toLowerCase().includes('client name') ||
+          field.label.toLowerCase().includes('participant name') ||
+          field.label === 'Consumer Name' ||
+          field.label === 'Client Name'
+        );
+
+        // If it's a client field and we have clients, show dropdown as HTML select
+        if (isClientField && clients.length > 0) {
+          // Auto-populate with active client if present and field is empty
+          const autoValue = value || (activeClient ? `${activeClient.firstName} ${activeClient.lastName}` : '');
+          
+          return (
+            <select
+              value={autoValue}
+              onChange={(e) => handleFieldChange(section.id, field.id, e.target.value, repeatIndex)}
+              className={fieldClasses}
+            >
+              <option value="">-- Select Client --</option>
+              {clients.map((client: any) => (
+                <option key={client.id} value={`${client.firstName} ${client.lastName}`}>
+                  {client.firstName} {client.lastName} {client.dddId ? `(ID: ${client.dddId})` : ''}
+                </option>
+              ))}
+            </select>
+          );
+        }
+
         // Only use speech-to-text for longer descriptive fields
         // Check if field label/placeholder suggests it's for notes, descriptions, observations, etc.
         const useSpeechForText = field.label && (

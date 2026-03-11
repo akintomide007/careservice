@@ -146,7 +146,7 @@ jobs:
       
       - name: Deploy to production
         run: |
-          echo "🚀 Deployment would happen here"
+          echo " Deployment would happen here"
           echo "This is a placeholder for actual deployment steps"
           # Add your deployment commands here
           # Examples:

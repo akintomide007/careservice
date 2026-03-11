@@ -8,7 +8,7 @@
 
 set -e  # Exit on error
 
-echo "🚀 CareService - Local PostgreSQL Setup"
+echo " CareService - Local PostgreSQL Setup"
 echo "========================================"
 echo ""
 

@@ -179,7 +179,7 @@ function processFile(filePath) {
         fs.writeFileSync(filePath, cleaned, 'utf8');
         console.log(`   ✅ File cleaned`);
       } else {
-        console.log(`   ℹ️  Would be cleaned (use --fix to apply)`);
+        console.log(`     Would be cleaned (use --fix to apply)`);
       }
       console.log('');
     }

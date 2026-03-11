@@ -28,6 +28,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install OpenSSL for Prisma (Alpine 3.22 uses OpenSSL 3.x)
+RUN apk add --no-cache openssl openssl-dev
+
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
 

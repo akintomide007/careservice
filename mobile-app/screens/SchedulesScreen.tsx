@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const API_URL = 'http://localhost:3001';
 
@@ -51,7 +52,7 @@ export default function SchedulesScreen({ token, onBack }: SchedulesScreenProps)
             <Text style={styles.emptyText}>Loading schedules...</Text>
           ) : schedules.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📅</Text>
+              <Ionicons name="calendar-outline" size={48} color="#9ca3af" style={styles.emptyIcon} />
               <Text style={styles.emptyText}>No scheduled shifts for today</Text>
               <Text style={styles.emptySubtext}>Enjoy your day off!</Text>
             </View>
@@ -153,7 +154,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: 16,
   },
   emptyText: {

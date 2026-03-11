@@ -9,6 +9,7 @@ export const taskService = {
     assignedTo: string;
     assignedBy: string;
     clientId?: string;
+    ispGoalId?: string;
     taskType: string;
     title: string;
     description?: string;
@@ -26,6 +27,7 @@ export const taskService = {
         assignedTo: data.assignedTo,
         assignedBy: data.assignedBy,
         clientId: data.clientId,
+        ispGoalId: data.ispGoalId,
         taskType: data.taskType,
         title: data.title,
         description: data.description,
@@ -67,6 +69,23 @@ export const taskService = {
             firstName: true,
             lastName: true,
             dddId: true
+          }
+        },
+        ispGoal: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            goalType: true,
+            priority: true,
+            progressPercentage: true,
+            outcome: {
+              select: {
+                id: true,
+                outcomeDescription: true,
+                category: true
+              }
+            }
           }
         },
         checklistItems: {

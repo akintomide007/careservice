@@ -1,6 +1,6 @@
 // src/add
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -10,11 +10,14 @@ interface DashboardHomeProps {
   activeSession: any;
   clients: any[];
   draftFormsCount?: number;
+  submittedFormsCount?: number;
+  rejectedFormsCount?: number;
   todaySchedule?: any[];
   pendingTasks?: any[];
   onClockIn: (clientId: string) => void;
   onClockOut: () => void;
   onNavigate: (screen: Screen) => void;
+  onRefresh: () => void;
   userInitial?: string;
 }
 
@@ -22,13 +25,17 @@ export default function DashboardHome({
   activeSession,
   clients,
   draftFormsCount = 0,
+  submittedFormsCount = 0,
+  rejectedFormsCount = 0,
   todaySchedule = [],
   pendingTasks = [],
   onClockIn,
   onClockOut,
   onNavigate,
+  onRefresh,
   userInitial = 'L',
 }: DashboardHomeProps) {
+  const [refreshing, setRefreshing] = useState(false);
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -42,6 +49,12 @@ export default function DashboardHome({
       minute: '2-digit',
       hour12: true 
     });
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
   };
 
   return (
@@ -78,6 +91,14 @@ export default function DashboardHome({
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#3b82f6"
+            colors={['#3b82f6']}
+          />
+        }
       >
         {/* Active Session Card */}
         {activeSession ? (
@@ -187,6 +208,25 @@ export default function DashboardHome({
           </View>
         </View>
 
+        {/* Forms Status Section */}
+        {(submittedFormsCount > 0 || rejectedFormsCount > 0) && (
+          <View style={styles.overviewSection}>
+            <Text style={styles.sectionTitle}>FORMS STATUS</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Ionicons name="checkmark-done" size={16} color="#10b981" style={styles.statIcon} />
+                <Text style={styles.statValue}>{submittedFormsCount}</Text>
+                <Text style={styles.statLabel}>SUBMITTED</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Ionicons name="close-circle" size={16} color="#ef4444" style={styles.statIcon} />
+                <Text style={styles.statValue}>{rejectedFormsCount}</Text>
+                <Text style={styles.statLabel}>REJECTED</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Quick Actions Section */}
         <View style={styles.quickActionsSection}>
           <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
@@ -256,53 +296,8 @@ export default function DashboardHome({
           </View>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => onNavigate('home')}
-        >
-          <View style={styles.activeNavIcon}>
-            <Ionicons name="home" size={24} color="#3b82f6" />
-          </View>
-          <Text style={styles.activeNavLabel}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => onNavigate('schedules')}
-        >
-          <Ionicons name="calendar-outline" size={24} color="#9ca3af" />
-          <Text style={styles.inactiveNavLabel}>Schedule</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => onNavigate('forms')}
-        >
-          <Ionicons name="document-text-outline" size={24} color="#9ca3af" />
-          <Text style={styles.inactiveNavLabel}>Forms</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => onNavigate('reports')}
-        >
-          <Ionicons name="bar-chart-outline" size={24} color="#9ca3af" />
-          <Text style={styles.inactiveNavLabel}>Reports</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => onNavigate('clients')}
-        >
-          <Ionicons name="people-outline" size={24} color="#9ca3af" />
-          <Text style={styles.inactiveNavLabel}>Clients</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -685,48 +680,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
-    paddingTop: 4,
-    paddingBottom: 10,
-    paddingHorizontal: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 1,
-  },
-  activeNavIcon: {
-    backgroundColor: '#dbeafe',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-    marginBottom: 1,
-  },
-  activeNavLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#3b82f6',
-    marginTop: 2,
-  },
-  inactiveNavLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#9ca3af',
-    marginTop: 2,
   },
 });

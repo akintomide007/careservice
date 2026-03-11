@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -258,6 +259,7 @@ model IspGoal {
   milestones            IspMilestone[]
   activities            IspActivity[]
   progressNotes         ProgressNote[]
+  tasks                 Task[]
 
   @@index([outcomeId])
   @@index([status])
@@ -597,6 +599,7 @@ model Task {
   assignedTo        String          @map("assigned_to")
   assignedBy        String          @map("assigned_by")
   clientId          String?         @map("client_id")
+  ispGoalId         String?         @map("isp_goal_id")
   taskType          String          @map("task_type")
   title             String
   description       String?
@@ -618,6 +621,7 @@ model Task {
   assignee          User            @relation("TaskAssignee", fields: [assignedTo], references: [id])
   assigner          User            @relation("TaskAssigner", fields: [assignedBy], references: [id])
   client            Client?         @relation(fields: [clientId], references: [id])
+  ispGoal           IspGoal?        @relation(fields: [ispGoalId], references: [id], onDelete: SetNull)
   results           TaskResult[]
   checklistItems    TaskChecklist[]
   violations        Violation[]
@@ -626,6 +630,7 @@ model Task {
   @@index([assignedTo])
   @@index([status])
   @@index([dueDate])
+  @@index([ispGoalId])
   @@map("tasks")
 }
 

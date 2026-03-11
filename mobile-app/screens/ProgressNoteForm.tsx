@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import VoiceToTextInput from '../components/VoiceToTextInput';
 
 interface ProgressNoteFormProps {
@@ -37,7 +38,10 @@ export default function ProgressNoteForm({ activeSession, onSubmit, onBack }: Pr
           <Text style={styles.pickerText}>{noteForm.serviceType}</Text>
         </View>
         
-        <Text style={styles.label}>Reason for Service 🎙️</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Reason for Service</Text>
+          <Ionicons name="mic-outline" size={16} color="#3b82f6" />
+        </View>
         <VoiceToTextInput
           value={noteForm.reasonForService}
           onChange={(text) => setNoteForm({...noteForm, reasonForService: text})}
@@ -46,7 +50,10 @@ export default function ProgressNoteForm({ activeSession, onSubmit, onBack }: Pr
           numberOfLines={3}
         />
         
-        <Text style={styles.label}>Supports Provided 🎙️</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Supports Provided</Text>
+          <Ionicons name="mic-outline" size={16} color="#3b82f6" />
+        </View>
         <VoiceToTextInput
           value={noteForm.supportsProvided}
           onChange={(text) => setNoteForm({...noteForm, supportsProvided: text})}
@@ -55,7 +62,10 @@ export default function ProgressNoteForm({ activeSession, onSubmit, onBack }: Pr
           numberOfLines={3}
         />
         
-        <Text style={styles.label}>Progress Notes 🎙️</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Progress Notes</Text>
+          <Ionicons name="mic-outline" size={16} color="#3b82f6" />
+        </View>
         <VoiceToTextInput
           value={noteForm.progressNotes}
           onChange={(text) => setNoteForm({...noteForm, progressNotes: text})}
@@ -110,12 +120,17 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 16,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+    marginTop: 16,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
-    marginTop: 16,
   },
   input: {
     borderWidth: 1,

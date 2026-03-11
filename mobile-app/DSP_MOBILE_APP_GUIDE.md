@@ -138,7 +138,7 @@ The mobile app has **complete database access** identical to the web dashboard D
 - ✅ Client auto-fill
 - ✅ Session linking
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Installation
 ```bash

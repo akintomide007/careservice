@@ -130,7 +130,7 @@ Speech-to-text functionality with microphone buttons has been integrated directl
 
 ---
 
-## 🚀 Quick Start for Your Team
+##  Quick Start for Your Team
 
 ### For DSPs:
 1. Open any form (Progress Notes, ISP Goals, etc.)

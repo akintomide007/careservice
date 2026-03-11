@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import VoiceToTextInput from '../components/VoiceToTextInput';
 
 interface IncidentReportFormProps {
@@ -58,7 +59,10 @@ export default function IncidentReportForm({ activeSession, onSubmit, onBack }: 
           ))}
         </View>
         
-        <Text style={styles.label}>Description 🎙️</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Description</Text>
+          <Ionicons name="mic-outline" size={16} color="#3b82f6" />
+        </View>
         <VoiceToTextInput
           value={incidentForm.description}
           onChange={(text) => setIncidentForm({...incidentForm, description: text})}
@@ -67,7 +71,10 @@ export default function IncidentReportForm({ activeSession, onSubmit, onBack }: 
           numberOfLines={4}
         />
         
-        <Text style={styles.label}>Action Taken 🎙️</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Action Taken</Text>
+          <Ionicons name="mic-outline" size={16} color="#3b82f6" />
+        </View>
         <VoiceToTextInput
           value={incidentForm.actionTaken}
           onChange={(text) => setIncidentForm({...incidentForm, actionTaken: text})}
@@ -122,12 +129,17 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 16,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+    marginTop: 16,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
-    marginTop: 16,
   },
   input: {
     borderWidth: 1,

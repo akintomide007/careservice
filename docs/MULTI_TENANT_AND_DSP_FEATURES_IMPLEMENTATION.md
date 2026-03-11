@@ -166,7 +166,7 @@ model OrganizationSettings {
 
 ---
 
-## 🚀 Next Steps to Complete Implementation
+##  Next Steps to Complete Implementation
 
 ### Immediate (Backend):
 1. **Create Controllers:**

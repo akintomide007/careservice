@@ -11,7 +11,7 @@ A hybrid AI-powered speech-to-text system that:
 
 ---
 
-## 🚀 Quick Setup (5 Minutes)
+##  Quick Setup (5 Minutes)
 
 ### Option 1: Free Mode (No API Key Needed)
 Works immediately in Chrome, Edge, and Safari browsers!
