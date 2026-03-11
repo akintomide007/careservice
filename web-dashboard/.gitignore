@@ -30,8 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files are now tracked - be careful with sensitive data!
+# .env*
 
 # vercel
 .vercel

@@ -9,13 +9,7 @@ lerna-debug.log*
 .pnp.js
 
 # Environment Variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.*.local
-*.env
+# .env files are now tracked - be careful with sensitive data!
 
 # Build outputs
 dist/
@@ -109,8 +103,7 @@ uploads/
 
 # Prisma
 prisma/migrations/*_dev/
-.env.test
-**/prisma/.env
+# .env files are now tracked
 
 # TypeScript
 *.tsbuildinfo
