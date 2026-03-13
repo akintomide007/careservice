@@ -80,13 +80,15 @@ services:
       context: ./web-dashboard
       dockerfile: Dockerfile
       target: runner  # Use production stage
+      args:
+        # Pass the API URL from .env.production at build time
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     container_name: careservice-dashboard
     env_file:
       - ./web-dashboard/.env.production
     environment:
       NODE_ENV: production
-      # Point to backend container
-      NEXT_PUBLIC_API_URL: http://backend:3001
+      # API URL is set from .env.production file (auto-configured by deploy script)
     ports:
       - "3000:3000"
     depends_on:

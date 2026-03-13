@@ -178,8 +178,10 @@ echo ""
 
 # Step 11: Build Docker images
 print_info "Building Docker images (this may take several minutes)..."
+# Export NEXT_PUBLIC_API_URL so docker-compose can use it as a build arg
+export NEXT_PUBLIC_API_URL="http://$HOST_IP:3001"
 docker-compose -f docker-compose.production.yml build --no-cache
-print_success "Docker images built"
+print_success "Docker images built with API URL: $NEXT_PUBLIC_API_URL"
 echo ""
 
 # Step 12: Start services

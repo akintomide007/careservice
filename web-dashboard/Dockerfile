@@ -13,6 +13,11 @@ RUN npm ci
 # Build stage
 FROM base AS builder
 WORKDIR /app
+
+# Accept build argument for API URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -20,7 +25,7 @@ COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build Next.js application
+# Build Next.js application with the API URL baked in
 RUN npm run build
 
 # Production stage
