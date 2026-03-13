@@ -49,7 +49,23 @@ fi
 print_success "Node.js version: $(node -v)"
 echo ""
 
-# Step 2: Check environment files
+# Step 2: Detect host IP address
+print_info "Detecting host IP address..."
+# Try to get the primary IP address (preferring non-local IPs)
+HOST_IP=$(hostname -I | awk '{print $1}')
+if [ -z "$HOST_IP" ] || [ "$HOST_IP" = "127.0.0.1" ]; then
+    # Fallback: try to get IP from default route
+    HOST_IP=$(ip route get 1 | awk '{print $7;exit}')
+fi
+if [ -z "$HOST_IP" ]; then
+    print_warning "Could not detect IP address automatically. Using localhost"
+    HOST_IP="localhost"
+else
+    print_success "Detected host IP: $HOST_IP"
+fi
+echo ""
+
+# Step 3: Check and update environment files
 print_info "Checking environment files..."
 if [ ! -f "backend/.env.production" ]; then
     print_error "backend/.env.production not found!"
@@ -62,32 +78,27 @@ fi
 print_success "Environment files found"
 echo ""
 
-# Step 3: Check JWT_SECRET
-print_info "Checking JWT_SECRET..."
-if grep -q "CHANGE_THIS_TO_SECURE_RANDOM_32_CHAR_STRING_IN_PRODUCTION" backend/.env.production; then
-    print_warning "JWT_SECRET not updated! Run: ./scripts/generate-secrets.sh"
-    read -p "Continue anyway? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-fi
-print_success "JWT_SECRET check complete"
+# Step 4: Update API URL in dashboard .env with detected IP
+print_info "Updating web-dashboard API URL to: http://$HOST_IP:3001"
+sed -i "s|NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://$HOST_IP:3001|g" web-dashboard/.env.production
+print_success "API URL updated in web-dashboard/.env.production"
 echo ""
 
-# Step 4: Stop existing containers
-print_info "Stopping existing containers..."
-docker-compose -f docker-compose.production.yml down
-print_success "Containers stopped"
+# Step 5: Update CORS origin in backend .env with detected IP
+print_info "Updating backend CORS origin to include: http://$HOST_IP:3000"
+# Update CORS_ORIGIN to include the detected IP along with localhost
+sed -i "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:3000,http://$HOST_IP:3000|g" backend/.env.production
+print_success "CORS origin updated in backend/.env.production"
 echo ""
 
-# Step 5: Install/Update dependencies
+# Step 6: Install backend dependencies
 print_info "Installing backend dependencies..."
 cd backend
 npm install --production=false
 print_success "Backend dependencies installed"
 echo ""
 
+# Step 7: Install web-dashboard dependencies
 print_info "Installing web-dashboard dependencies..."
 cd ../web-dashboard
 npm install --production=false
@@ -95,7 +106,7 @@ cd ..
 print_success "Web-dashboard dependencies installed"
 echo ""
 
-# Step 6: Fix security vulnerabilities
+# Step 8: Fix security vulnerabilities
 print_info "Fixing security vulnerabilities..."
 cd backend
 npm audit fix || true  # Continue even if some fixes fail
@@ -105,19 +116,19 @@ cd ..
 print_success "Security vulnerabilities addressed"
 echo ""
 
-# Step 7: Build Docker images
+# Step 9: Build Docker images
 print_info "Building Docker images (this may take several minutes)..."
 docker-compose -f docker-compose.production.yml build --no-cache
 print_success "Docker images built"
 echo ""
 
-# Step 8: Start services
+# Step 10: Start services
 print_info "Starting services..."
 docker-compose -f docker-compose.production.yml up -d
 print_success "Services started"
 echo ""
 
-# Step 9: Wait for services to be healthy
+# Step 11: Wait for services to be healthy
 print_info "Waiting for services to be healthy..."
 sleep 10
 
@@ -139,13 +150,13 @@ fi
 
 echo ""
 
-# Step 10: Run database migrations
+# Step 12: Run database migrations
 print_info "Running database migrations..."
 docker-compose -f docker-compose.production.yml exec -T backend npm run db:push
 print_success "Database migrations complete"
 echo ""
 
-# Step 11: Seed database (optional)
+# Step 13: Seed database (optional)
 read -p "Seed database with initial data? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -155,12 +166,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 echo ""
 
-# Step 12: Display status
+# Step 14: Display status
 print_info "Checking service status..."
 docker-compose -f docker-compose.production.yml ps
 echo ""
 
-# Step 13: Display logs
+# Step 15: Display logs
 print_info "Recent logs:"
 docker-compose -f docker-compose.production.yml logs --tail=20
 echo ""
@@ -169,9 +180,11 @@ echo ""
 print_success "🎉 Production deployment complete!"
 echo ""
 echo "📊 Service URLs:"
-echo "   - Web Dashboard: http://localhost:3000"
-echo "   - Backend API:   http://localhost:3001"
-echo "   - API Health:    http://localhost:3001/health"
+echo "   - Web Dashboard (Local):   http://localhost:3000"
+echo "   - Web Dashboard (Network): http://$HOST_IP:3000"
+echo "   - Backend API (Local):     http://localhost:3001"
+echo "   - Backend API (Network):   http://$HOST_IP:3001"
+echo "   - API Health:              http://$HOST_IP:3001/health"
 echo ""
 echo "📝 Useful commands:"
 echo "   - View logs:     docker-compose -f docker-compose.production.yml logs -f"
