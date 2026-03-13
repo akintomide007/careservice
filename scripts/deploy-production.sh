@@ -57,6 +57,10 @@ elif command -v docker-compose &> /dev/null; then
     sudo rm -f /usr/bin/docker-compose 2>/dev/null || true
     
     print_info "Installing Docker Compose Plugin..."
+    # Add Docker's official GPG key and repository
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt update -qq
     sudo apt install -y docker-compose-plugin
     
@@ -71,6 +75,10 @@ EOF
     print_success "Docker Compose Plugin installed successfully!"
 else
     print_error "Docker Compose not found. Installing..."
+    # Add Docker's official GPG key and repository
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt update -qq
     sudo apt install -y docker-compose-plugin
     print_success "Docker Compose Plugin installed"
