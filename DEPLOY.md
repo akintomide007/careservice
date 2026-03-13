@@ -23,9 +23,7 @@ sudo apt install -y nodejs git
 sudo apt install docker-compose-plugin -y
 ```
 
-**⚠️ Important**: 
-- Log out and back in after Docker installation!
-- If you get `KeyError: 'ContainerConfig'` error, run the fix script (see troubleshooting below)
+**⚠️ Important**: Log out and back in after Docker installation!
 
 ---
 
@@ -37,11 +35,13 @@ cd ~
 git clone https://github.com/akintomide007/careservice.git
 cd careservice
 
-# Run automated deployment script
+# Run automated deployment script (handles everything!)
 bash scripts/deploy-production.sh
 ```
 
-**That's it!** The script automatically:
+**That's it! ONE COMMAND!** The script automatically:
+- ✅ Checks and fixes Docker Compose version (if needed)
+- ✅ Cleans up any leftover containers
 - ✅ Detects your server IP
 - ✅ Configures all environment files
 - ✅ Installs dependencies
@@ -107,22 +107,19 @@ docker-compose -f docker-compose.production.yml restart
 
 ## 🚨 Troubleshooting
 
-### Error: `KeyError: 'ContainerConfig'`
+### Any Docker Compose Issues?
 
-This error means you have an old version of docker-compose. Fix it by running:
+**No worries!** The deployment script now automatically:
+- ✅ Detects old docker-compose versions
+- ✅ Upgrades to Docker Compose Plugin automatically
+- ✅ Cleans up container conflicts
+- ✅ Handles all common deployment issues
 
-```bash
-# Run the fix script from the project directory
-bash scripts/fix-docker-compose.sh
+**Just run the deployment script** - it fixes everything!
 
-# Then try deployment again
-bash scripts/deploy-production.sh
-```
-
-The fix script will:
-- Remove old Python-based docker-compose (v1.x)
-- Install new Docker Compose plugin (v2.x)
-- Create a compatibility wrapper
+If you still encounter issues, standalone fix scripts are available:
+- `bash scripts/fix-docker-compose.sh` - Fix Docker Compose version
+- `bash scripts/cleanup-containers.sh` - Clean up containers
 
 ---
 
@@ -136,12 +133,14 @@ See the complete guide: [docs/PRODUCTION_SERVER_DEPLOYMENT.md](docs/PRODUCTION_S
 
 The `deploy-production.sh` script handles everything automatically:
 
-1. **Auto IP Detection** - No manual configuration needed
-2. **Environment Setup** - All configs updated automatically
-3. **Dependency Installation** - Backend & frontend dependencies
-4. **Docker Build** - Images built and optimized
-5. **Service Startup** - All containers started in correct order
-6. **Database Setup** - Migrations and optional seeding
-7. **Health Checks** - Verifies all services are running
+1. **Docker Compose Auto-Fix** - Detects and upgrades old versions
+2. **Container Cleanup** - Removes conflicts automatically
+3. **Auto IP Detection** - No manual configuration needed
+4. **Environment Setup** - All configs updated automatically
+5. **Dependency Installation** - Backend & frontend dependencies
+6. **Docker Build** - Images built and optimized
+7. **Service Startup** - All containers started in correct order
+8. **Database Setup** - Migrations and optional seeding
+9. **Health Checks** - Verifies all services are running
 
-**Just run the script on any server and it works!**
+**Just run the script on any server and it works - even with common Docker issues!**
