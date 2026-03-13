@@ -68,8 +68,9 @@ app.use('/api/organization', organizationSettingsRoutes);
 
 app.use(errorHandler);
 
-app.listen(config.port, () => {
+app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
   console.log(`Environment: ${config.env}`);
   console.log(`Mock MS365: ${config.microsoft.useMock}`);
+  console.log(`Listening on 0.0.0.0:${config.port}`);
 });

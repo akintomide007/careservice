@@ -34,11 +34,24 @@ RUN apk add --no-cache openssl openssl-dev
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
 
-# Copy necessary files
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+# Copy package files first
 COPY --from=builder /app/package*.json ./
+
+# Copy prisma schema
 COPY --from=builder /app/prisma ./prisma
+
+# Copy node_modules (includes Prisma CLI)
+COPY --from=builder /app/node_modules ./node_modules
+
+# Regenerate Prisma Client in the production environment
+# This ensures binary compatibility with Alpine Linux
+RUN npx prisma generate
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
+# Fix permissions
+RUN chown -R node:node /app
 
 USER node
 
