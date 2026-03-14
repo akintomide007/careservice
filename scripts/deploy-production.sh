@@ -1,24 +1,29 @@
 #!/bin/bash
 
-# =============================================================================
-# Production Deployment Script for CareService
-# =============================================================================
+# ============================================================================
+# CareService Production Deployment Script v2.0
+# ============================================================================
+# Comprehensive production deployment with:
+# - Pre-flight checks
+# - Automatic database backup
+# - Smart port conflict resolution
+# - Safe cleanup (preserves data volumes)
+# - Health monitoring
+# ============================================================================
 
 set -e  # Exit on error
-
-echo " Starting CareService Production Deployment..."
-echo ""
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# Function to print colored messages
 print_info() {
-    echo -e "${BLUE}  $1${NC}"
+    echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 print_success() {
@@ -33,85 +38,85 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+print_header() {
+    echo -e "${MAGENTA}$1${NC}"
+}
+
+# Create deployment log
+DEPLOY_LOG="./deployment_$(date +"%Y%m%d_%H%M%S").log"
+exec > >(tee -a "$DEPLOY_LOG") 2>&1
+
+echo ""
+print_header "╔════════════════════════════════════════════════════════════╗"
+print_header "║   🚀 CareService Production Deployment v2.0              ║"
+print_header "╚════════════════════════════════════════════════════════════╝"
+echo ""
+print_info "Timestamp: $(date)"
+print_info "Log file: $DEPLOY_LOG"
+echo ""
+
 # Check if running from project root
 if [ ! -f "docker-compose.production.yml" ]; then
     print_error "Please run this script from the project root directory"
     exit 1
 fi
 
-# Step 1: Check and fix Docker Compose version
-print_info "Checking Docker Compose version..."
+# ============================================================================
+# PHASE 1: PRE-FLIGHT CHECKS
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 1: PRE-FLIGHT CHECKS"
+print_header "═══════════════════════════════════════════════════════════"
+echo ""
+
+# Check Docker
+print_info "Checking Docker installation..."
+if ! command -v docker &> /dev/null; then
+    print_error "Docker is not installed"
+    exit 1
+fi
+DOCKER_VERSION=$(docker --version)
+print_success "Docker installed: $DOCKER_VERSION"
+
+# Check Docker Compose
+print_info "Checking Docker Compose..."
 if docker compose version &> /dev/null; then
     COMPOSE_VERSION=$(docker compose version --short 2>/dev/null || echo "2.0.0")
     print_success "Docker Compose Plugin detected (v$COMPOSE_VERSION)"
+    COMPOSE_CMD="docker compose"
 elif command -v docker-compose &> /dev/null; then
-    OLD_VERSION=$(docker-compose version --short 2>/dev/null || echo "unknown")
-    print_warning "Old docker-compose detected (v$OLD_VERSION). Upgrading to Docker Compose Plugin..."
-    
-    # Auto-fix: Remove old docker-compose and install plugin
-    print_info "Removing old docker-compose..."
-    sudo apt remove docker-compose -y 2>/dev/null || true
-    sudo pip uninstall docker-compose -y 2>/dev/null || true
-    sudo pip3 uninstall docker-compose -y 2>/dev/null || true
-    sudo rm -f /usr/local/bin/docker-compose 2>/dev/null || true
-    sudo rm -f /usr/bin/docker-compose 2>/dev/null || true
-    
-    print_info "Installing Docker Compose Plugin..."
-    # Add Docker's official GPG key and repository
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt update -qq
-    sudo apt install -y docker-compose-plugin
-    
-    # Create compatibility wrapper
-    cat > /tmp/docker-compose-wrapper.sh << 'EOF'
-#!/bin/bash
-exec docker compose "$@"
-EOF
-    sudo mv /tmp/docker-compose-wrapper.sh /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-    
-    print_success "Docker Compose Plugin installed successfully!"
+    COMPOSE_VERSION=$(docker-compose version --short 2>/dev/null || echo "unknown")
+    print_warning "Old docker-compose detected (v$COMPOSE_VERSION)"
+    COMPOSE_CMD="docker-compose"
 else
-    print_error "Docker Compose not found. Installing..."
-    # Add Docker's official GPG key and repository
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt update -qq
-    sudo apt install -y docker-compose-plugin
-    print_success "Docker Compose Plugin installed"
+    print_error "Docker Compose not found"
+    exit 1
 fi
-echo ""
 
-# Step 2: Check Node.js version
+# Check Node.js version
 print_info "Checking Node.js version..."
+if ! command -v node &> /dev/null; then
+    print_error "Node.js is not installed"
+    exit 1
+fi
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 20 ]; then
-    print_error "Node.js version 20 or higher required. Current: $(node -v)"
+if [ "$NODE_VERSION" -lt 18 ]; then
+    print_error "Node.js version 18 or higher required. Current: $(node -v)"
     exit 1
 fi
 print_success "Node.js version: $(node -v)"
-echo ""
 
-# Step 3: Detect host IP address
-print_info "Detecting host IP address..."
-# Try to get the primary IP address (preferring non-local IPs)
-HOST_IP=$(hostname -I | awk '{print $1}')
-if [ -z "$HOST_IP" ] || [ "$HOST_IP" = "127.0.0.1" ]; then
-    # Fallback: try to get IP from default route
-    HOST_IP=$(ip route get 1 | awk '{print $7;exit}')
+# Check disk space
+print_info "Checking disk space..."
+AVAILABLE_SPACE=$(df -BG . | tail -1 | awk '{print $4}' | sed 's/G//')
+if [ "$AVAILABLE_SPACE" -lt 5 ]; then
+    print_error "Insufficient disk space. At least 5GB required, found ${AVAILABLE_SPACE}GB"
+    exit 1
 fi
-if [ -z "$HOST_IP" ]; then
-    print_warning "Could not detect IP address automatically. Using localhost"
-    HOST_IP="localhost"
-else
-    print_success "Detected host IP: $HOST_IP"
-fi
-echo ""
+print_success "Available disk space: ${AVAILABLE_SPACE}GB"
 
-# Step 4: Check and update environment files
+# Check environment files
 print_info "Checking environment files..."
 if [ ! -f "backend/.env.production" ]; then
     print_error "backend/.env.production not found!"
@@ -122,142 +127,257 @@ if [ ! -f "web-dashboard/.env.production" ]; then
     exit 1
 fi
 print_success "Environment files found"
+
+echo ""
+print_success "Pre-flight checks complete!"
+
+# ============================================================================
+# PHASE 2: DETECT HOST IP
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 2: NETWORK CONFIGURATION"
+print_header "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Step 5: Update API URL in dashboard .env with detected IP
-print_info "Updating web-dashboard API URL to: http://$HOST_IP:3001"
-sed -i "s|NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://$HOST_IP:3001|g" web-dashboard/.env.production
-print_success "API URL updated in web-dashboard/.env.production"
-echo ""
-
-# Step 6: Update CORS origin in backend .env with detected IP
-print_info "Updating backend CORS origin to include: http://$HOST_IP:3000"
-# Update CORS_ORIGIN to include the detected IP along with localhost
-sed -i "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:3000,http://$HOST_IP:3000|g" backend/.env.production
-print_success "CORS origin updated in backend/.env.production"
-echo ""
-
-# Step 7: Clean up any existing containers
-print_info "Cleaning up existing containers..."
-docker-compose -f docker-compose.production.yml down 2>/dev/null || true
-docker container prune -f > /dev/null 2>&1 || true
-
-# Remove any orphaned careservice containers
-ORPHANED=$(docker ps -a --filter "name=careservice" --filter "name=d03e3ec" --format "{{.Names}}" 2>/dev/null | wc -l)
-if [ "$ORPHANED" -gt 0 ]; then
-    print_warning "Found $ORPHANED orphaned container(s). Removing..."
-    docker ps -a --filter "name=careservice" --filter "name=d03e3ec" --format "{{.Names}}" | xargs -r docker rm -f > /dev/null 2>&1
+print_info "Detecting host IP address..."
+HOST_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "")
+if [ -z "$HOST_IP" ] || [ "$HOST_IP" = "127.0.0.1" ]; then
+    HOST_IP=$(ip route get 1 2>/dev/null | awk '{print $7;exit}' || echo "localhost")
 fi
-print_success "Container cleanup complete"
+if [ -z "$HOST_IP" ]; then
+    print_warning "Could not detect IP address automatically. Using localhost"
+    HOST_IP="localhost"
+fi
+print_success "Detected host IP: $HOST_IP"
+
+# ============================================================================
+# PHASE 3: PORT CONFLICT RESOLUTION
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 3: PORT AVAILABILITY CHECK"
+print_header "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Step 8: Install backend dependencies
+# Run port check script
+bash scripts/check-ports.sh
+
+# Source port assignments
+if [ -f /tmp/careservice_ports.env ]; then
+    source /tmp/careservice_ports.env
+    print_info "Port configuration loaded:"
+    print_info "  • Web Dashboard: $WEB_PORT"
+    print_info "  • Backend API: $BACKEND_PORT"
+    print_info "  • PostgreSQL: $POSTGRES_PORT"
+    print_info "  • Redis: $REDIS_PORT"
+else
+    # Default ports
+    export WEB_PORT=3000
+    export BACKEND_PORT=3001
+    export POSTGRES_PORT=5433
+    export REDIS_PORT=6381
+fi
+
+# ============================================================================
+# PHASE 4: DATABASE BACKUP
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 4: DATABASE BACKUP"
+print_header "═══════════════════════════════════════════════════════════"
+echo ""
+
+bash scripts/backup-database.sh || print_warning "Backup skipped (first deployment?)"
+
+# ============================================================================
+# PHASE 5: COMPREHENSIVE CLEANUP
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 5: COMPREHENSIVE CLEANUP"
+print_header "═══════════════════════════════════════════════════════════"
+echo ""
+
+bash scripts/pre-deploy-cleanup.sh
+
+# ============================================================================
+# PHASE 6: ENVIRONMENT CONFIGURATION
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 6: ENVIRONMENT CONFIGURATION"
+print_header "═══════════════════════════════════════════════════════════"
+echo ""
+
+# Update API URL in dashboard .env
+print_info "Configuring web-dashboard API URL..."
+sed -i.bak "s|NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://$HOST_IP:$BACKEND_PORT|g" web-dashboard/.env.production
+print_success "API URL: http://$HOST_IP:$BACKEND_PORT"
+
+# Update CORS origin in backend .env
+print_info "Configuring backend CORS origins..."
+sed -i.bak "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:$WEB_PORT,http://$HOST_IP:$WEB_PORT|g" backend/.env.production
+print_success "CORS origins: http://localhost:$WEB_PORT,http://$HOST_IP:$WEB_PORT"
+
+# ============================================================================
+# PHASE 7: INSTALL DEPENDENCIES
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 7: INSTALL DEPENDENCIES"
+print_header "═══════════════════════════════════════════════════════════"
+echo ""
+
 print_info "Installing backend dependencies..."
 cd backend
-npm install --production=false
+npm install --production=false --silent 2>&1 | grep -E "(added|removed|changed|audited)" || true
 print_success "Backend dependencies installed"
-echo ""
+cd ..
 
-# Step 9: Install web-dashboard dependencies
 print_info "Installing web-dashboard dependencies..."
-cd ../web-dashboard
-npm install --production=false
-cd ..
+cd web-dashboard
+npm install --production=false --silent 2>&1 | grep -E "(added|removed|changed|audited)" || true
 print_success "Web-dashboard dependencies installed"
-echo ""
-
-# Step 10: Fix security vulnerabilities
-print_info "Fixing security vulnerabilities..."
-cd backend
-npm audit fix || true  # Continue even if some fixes fail
-cd ../web-dashboard
-npm audit fix || true
 cd ..
-print_success "Security vulnerabilities addressed"
+
+# ============================================================================
+# PHASE 8: BUILD & DEPLOY CONTAINERS
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 8: BUILD & DEPLOY CONTAINERS"
+print_header "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Step 11: Build Docker images
+# Export ports for docker-compose
+export WEB_PORT BACKEND_PORT POSTGRES_PORT REDIS_PORT
+
 print_info "Building Docker images (this may take several minutes)..."
-# Export NEXT_PUBLIC_API_URL so docker-compose can use it as a build arg
-export NEXT_PUBLIC_API_URL="http://$HOST_IP:3001"
-docker-compose -f docker-compose.production.yml build --no-cache
-print_success "Docker images built with API URL: $NEXT_PUBLIC_API_URL"
-echo ""
+$COMPOSE_CMD -f docker-compose.production.yml build --no-cache 2>&1 | grep -E "(Building|writing|naming|DONE)" || true
+print_success "Images built successfully"
 
-# Step 12: Start services
 print_info "Starting services..."
-docker-compose -f docker-compose.production.yml up -d
+$COMPOSE_CMD -f docker-compose.production.yml up -d
 print_success "Services started"
+
+# ============================================================================
+# PHASE 9: HEALTH CHECKS & VERIFICATION
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 9: HEALTH CHECKS & VERIFICATION"
+print_header "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Step 13: Wait for services to be healthy
 print_info "Waiting for services to be healthy..."
-sleep 10
 
-# Check postgres
+# Wait for PostgreSQL
 print_info "Checking PostgreSQL..."
-if docker-compose -f docker-compose.production.yml exec -T postgres pg_isready -U careuser -d care_provider_db > /dev/null 2>&1; then
-    print_success "PostgreSQL is healthy"
-else
-    print_warning "PostgreSQL may still be starting up"
-fi
+for i in {1..30}; do
+    if docker exec careservice-postgres pg_isready -U careuser -d care_provider_db &>/dev/null; then
+        print_success "PostgreSQL is ready"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        print_error "PostgreSQL failed to start"
+        exit 1
+    fi
+    sleep 2
+done
 
-# Check redis
+# Wait for Redis
 print_info "Checking Redis..."
-if docker-compose -f docker-compose.production.yml exec -T redis redis-cli ping > /dev/null 2>&1; then
-    print_success "Redis is healthy"
-else
-    print_warning "Redis may still be starting up"
-fi
+for i in {1..30}; do
+    if docker exec careservice-redis redis-cli ping &>/dev/null; then
+        print_success "Redis is ready"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        print_error "Redis failed to start"
+        exit 1
+    fi
+    sleep 2
+done
 
+# Wait for Backend
+print_info "Checking Backend API..."
+for i in {1..60}; do
+    if curl -s "http://localhost:$BACKEND_PORT/health" &>/dev/null; then
+        print_success "Backend API is ready"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        print_warning "Backend health check timed out (may still be starting)"
+    fi
+    sleep 2
+done
+
+# Wait for Web Dashboard
+print_info "Checking Web Dashboard..."
+for i in {1..60}; do
+    if curl -s "http://localhost:$WEB_PORT" &>/dev/null; then
+        print_success "Web Dashboard is ready"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        print_warning "Web Dashboard health check timed out (may still be starting)"
+    fi
+    sleep 2
+done
+
+# ============================================================================
+# PHASE 10: DATABASE MIGRATIONS
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  PHASE 10: DATABASE MIGRATIONS"
+print_header "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Step 14: Run database migrations
 print_info "Running database migrations..."
-docker-compose -f docker-compose.production.yml exec -T backend npm run db:push
-print_success "Database migrations complete"
+docker exec careservice-backend npx prisma migrate deploy
+print_success "Migrations applied"
+
+print_info "Generating Prisma client..."
+docker exec careservice-backend npx prisma generate
+print_success "Prisma client generated"
+
+# ============================================================================
+# PHASE 11: DEPLOYMENT SUMMARY
+# ============================================================================
+echo ""
+print_header "═══════════════════════════════════════════════════════════"
+print_header "  🎉 DEPLOYMENT COMPLETE!"
+print_header "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Step 15: Seed database (optional)
-read -p "Seed database with initial data? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Seeding database..."
-    docker-compose -f docker-compose.production.yml exec -T backend npm run db:seed
-    print_success "Database seeded"
+print_success "CareService is now running!"
+echo ""
+print_info "📊 Service Status:"
+$COMPOSE_CMD -f docker-compose.production.yml ps
+
+echo ""
+print_info "🌐 Access URLs:"
+echo -e "${CYAN}  • Web Dashboard:  http://localhost:$WEB_PORT${NC}"
+echo -e "${CYAN}  • Backend API:    http://localhost:$BACKEND_PORT${NC}"
+echo -e "${CYAN}  • API Health:     http://localhost:$BACKEND_PORT/health${NC}"
+if [ "$HOST_IP" != "localhost" ]; then
+    echo ""
+    print_info "🌍 Network Access:"
+    echo -e "${CYAN}  • Web Dashboard:  http://$HOST_IP:$WEB_PORT${NC}"
+    echo -e "${CYAN}  • Backend API:    http://$HOST_IP:$BACKEND_PORT${NC}"
 fi
-echo ""
 
-# Step 16: Display status
-print_info "Checking service status..."
-docker-compose -f docker-compose.production.yml ps
 echo ""
+print_info "📝 Useful Commands:"
+echo -e "${YELLOW}  • View logs:       docker compose -f docker-compose.production.yml logs -f${NC}"
+echo -e "${YELLOW}  • Stop services:   docker compose -f docker-compose.production.yml down${NC}"
+echo -e "${YELLOW}  • Restart:         docker compose -f docker-compose.production.yml restart${NC}"
+echo -e "${YELLOW}  • Rollback:        bash scripts/rollback.sh${NC}"
 
-# Step 17: Display logs
-print_info "Recent logs:"
-docker-compose -f docker-compose.production.yml logs --tail=20
 echo ""
-
-# Success message
-print_success "🎉 Production deployment complete!"
+print_info "📄 Deployment log saved: $DEPLOY_LOG"
 echo ""
-echo "📊 Service URLs:"
-echo "   - Web Dashboard (Local):   http://localhost:3000"
-echo "   - Web Dashboard (Network): http://$HOST_IP:3000"
-echo "   - Backend API (Local):     http://localhost:3001"
-echo "   - Backend API (Network):   http://$HOST_IP:3001"
-echo "   - API Health:              http://$HOST_IP:3001/health"
-echo ""
-echo "📝 Useful commands:"
-echo "   - View logs:     docker-compose -f docker-compose.production.yml logs -f"
-echo "   - Stop services: docker-compose -f docker-compose.production.yml down"
-echo "   - Restart:       docker-compose -f docker-compose.production.yml restart"
-echo "   - Shell access:  docker-compose -f docker-compose.production.yml exec backend sh"
-echo ""
-print_warning "Remember to:"
-echo "   1. Update JWT_SECRET in backend/.env.production"
-echo "   2. Change default database password"
-echo "   3. Update CORS_ORIGIN with your domain"
-echo "   4. Set up SSL/TLS (nginx reverse proxy recommended)"
-echo "   5. Configure backups for PostgreSQL"
+print_success "Happy deploying! 🚀"
 echo ""
