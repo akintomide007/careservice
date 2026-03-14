@@ -234,6 +234,33 @@ print_info "Configuring backend CORS origins..."
 sed -i.bak "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:$WEB_PORT,http://$HOST_IP:$WEB_PORT|g" backend/.env.production
 print_success "Backend CORS configured"
 
+# Auto-generate security secrets if missing
+print_info "Checking backend security secrets..."
+
+# Check and generate JWT_SECRET
+if ! grep -q "^JWT_SECRET=" backend/.env.production 2>/dev/null || \
+   [ -z "$(grep "^JWT_SECRET=" backend/.env.production 2>/dev/null | cut -d'=' -f2-)" ]; then
+    print_warning "JWT_SECRET missing, generating secure secret..."
+    JWT_SECRET=$(openssl rand -base64 32)
+    echo "JWT_SECRET=$JWT_SECRET" >> backend/.env.production
+    print_success "JWT_SECRET generated and added"
+else
+    print_success "JWT_SECRET exists"
+fi
+
+# Check and generate SESSION_SECRET
+if ! grep -q "^SESSION_SECRET=" backend/.env.production 2>/dev/null || \
+   [ -z "$(grep "^SESSION_SECRET=" backend/.env.production 2>/dev/null | cut -d'=' -f2-)" ]; then
+    print_warning "SESSION_SECRET missing, generating secure secret..."
+    SESSION_SECRET=$(openssl rand -base64 32)
+    echo "SESSION_SECRET=$SESSION_SECRET" >> backend/.env.production
+    print_success "SESSION_SECRET generated and added"
+else
+    print_success "SESSION_SECRET exists"
+fi
+
+print_success "All backend security secrets configured"
+
 # ============================================================================
 # PHASE 7: INSTALL DEPENDENCIES
 # ============================================================================
